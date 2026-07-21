@@ -1,0 +1,2395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lunchbox Command — Admin v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#F3F4F7;--surface:#FFFFFF;--panel:#FFFFFF;--border:#E3E5EA;
+  --accent:#E65100;--accent2:#FF8A50;--accentbg:rgba(230,81,0,.08);
+  --green:#16A34A;--greenbg:rgba(22,163,74,.08);
+  --red:#DC2626;--redbg:rgba(220,38,38,.08);
+  --amber:#D97706;--amberbg:rgba(217,119,6,.08);
+  --blue:#2563EB;--bluebg:rgba(37,99,235,.08);
+  --purple:#9333EA;--purplebg:rgba(147,51,234,.08);
+  --teal:#0D9488;--tealbg:rgba(13,148,136,.08);
+  --text:#1A1D23;--muted:#6B7280;--subtle:#EEF0F3;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --r:10px;--r-lg:14px;
+  --shadow:0 1px 3px rgba(16,24,40,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.shell{display:grid;grid-template-columns:220px 1fr;grid-template-rows:100vh;height:100vh;overflow:hidden}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0;background:var(--surface)}
+.content{flex:1;overflow-y:auto;padding:24px}
+.brand{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.brand-mark{display:flex;align-items:center;gap:10px}
+.brand-icon{width:34px;height:34px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.brand-name{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.brand-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.nav-section{padding:12px 10px 4px}
+.nav-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:0 8px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;transition:all .15s;user-select:none}
+.nav-item:hover{color:var(--text);background:var(--panel)}
+.nav-item.active{color:var(--accent);background:var(--accentbg)}
+.nav-item .ni{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:20px;padding:1px 6px;font-size:10px;font-weight:700}
+.nav-badge.purple{background:var(--purple)}
+.nav-badge.blue{background:var(--blue)}
+.sidebar-foot{padding:14px;border-top:1px solid var(--border);margin-top:auto}
+.admin-row{display:flex;align-items:center;gap:9px}
+.admin-av{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.admin-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.admin-role{font-size:11px;color:var(--muted)}
+.logout-link{margin-top:8px;font-size:12px;color:var(--muted);cursor:pointer;padding:6px 0;display:block;text-align:center;transition:color .15s}
+.logout-link:hover{color:var(--red)}
+.page-title{font-size:16px;font-weight:600;flex:1}
+.topbar-date{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.live-pill{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green);background:var(--greenbg);padding:4px 10px;border-radius:20px;font-weight:600}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.topbar-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);transition:background .15s}
+.topbar-btn:hover{background:var(--accent2)}
+.topbar-btn.secondary{background:var(--panel);color:var(--text);border:1px solid var(--border)}
+.topbar-btn.secondary:hover{background:var(--subtle)}
+.topbar-btn.green-btn{background:#16a34a;color:#fff}
+.topbar-btn.green-btn:hover{background:#15803d}
+.topbar-btn.purple-btn{background:var(--purple);color:#fff}
+.topbar-btn.purple-btn:hover{background:#9333ea}
+.topbar-btn.teal-btn{background:var(--teal);color:#fff}
+.panel{display:none}.panel.active{display:block}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.stat-card.clickable{cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s}
+.stat-card.clickable:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(16,24,40,.12)}
+.stat-card.clickable:active{transform:translateY(0)}
+.stat-card.clickable.active-stat{border-color:var(--accent);box-shadow:0 0 0 2px var(--accentbg)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat-card.total::before{background:var(--accent)}
+.stat-card.pending::before{background:var(--amber)}
+.stat-card.done::before{background:var(--green)}
+.stat-card.delayed::before{background:var(--red)}
+.stat-card.msgs::before{background:var(--purple)}
+.stat-card.nobox::before{background:var(--teal)}
+.stat-num{font-size:32px;font-weight:600;line-height:1;font-family:var(--mono);margin-bottom:4px}
+.stat-num.orange{color:var(--accent)}.stat-num.amber{color:var(--amber)}
+.stat-num.green{color:var(--green)}.stat-num.red{color:var(--red)}
+.stat-num.purple{color:var(--purple)}.stat-num.teal{color:var(--teal)}
+.stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:6px}
+.progress-row{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px}
+.progress-label{font-size:12px;color:var(--muted);min-width:80px}
+.progress-track{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;background:var(--green);transition:width .5s}
+.progress-pct{font-size:13px;font-weight:600;font-family:var(--mono);min-width:36px;text-align:right}
+.tcard{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;margin-bottom:16px;box-shadow:var(--shadow)}
+.tcard-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.tcard-title{font-size:14px;font-weight:600}
+.tc-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.search-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:6px 12px;font-size:12px;color:var(--text);outline:none;width:180px;font-family:var(--font);transition:border .15s}
+.search-box:focus{border-color:var(--accent)}
+.date-inp{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:6px 10px;font-size:12px;color:var(--text);outline:none;font-family:var(--font)}
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--bg);padding:10px 16px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;z-index:2}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:nth-child(even):not(.row-delayed):not(.row-nobox):not(.row-unread){background:rgba(16,24,40,.012)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg)}
+tbody tr.row-delayed{background:rgba(220,38,38,.05);border-left:3px solid var(--red)}
+tbody tr.row-nobox{background:rgba(147,51,234,.05);border-left:3px solid var(--purple)}
+tbody tr.row-unread{background:rgba(147,51,234,.05)}
+td{padding:11px 16px;font-size:13px;vertical-align:middle}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.badge-pending{background:var(--amberbg);color:var(--amber)}
+.badge-picked{background:var(--greenbg);color:var(--green)}
+.badge-delayed{background:var(--redbg);color:var(--red)}
+.badge-delivered{background:var(--bluebg);color:var(--blue)}
+.badge-nobox{background:var(--purplebg);color:var(--purple)}
+.badge-unread{background:var(--purplebg);color:var(--purple)}
+.badge-read{background:var(--subtle);color:var(--muted)}
+.f-btn{padding:4px 12px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .15s}
+.f-btn.on{background:var(--accent);color:#fff}
+.f-btn.off{background:var(--subtle);color:var(--muted)}
+.f-btn.red.on{background:var(--red)}
+.f-btn.purple.on{background:var(--purple)}
+.rea-wrap{display:flex;gap:6px;align-items:center}
+.rea-sel{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--text);outline:none;font-family:var(--font);max-width:130px}
+.rea-btn{background:var(--blue);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);white-space:nowrap}
+.rea-btn:hover{background:#2563EB}
+.agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:16px}
+.agent-mini-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px}
+.agent-mini-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px 8px;text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s}
+.agent-mini-card:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(16,24,40,.10);border-color:var(--accent)}
+.agent-mini-card:active{transform:translateY(0)}
+.agent-mini-av{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin:0 auto 6px}
+.agent-mini-name{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.agent-mini-stats{font-size:10px;font-weight:700;display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+.agent-mini-stats .p{color:var(--amber)}
+.agent-mini-stats .k{color:var(--green)}
+.agent-mini-stats .dl{color:var(--red)}
+.agent-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow)}
+.ag-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.ag-av{width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700;flex-shrink:0}
+.ag-name{font-size:15px;font-weight:600}.ag-email{font-size:11px;color:var(--muted);margin-top:2px}
+.ag-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.ag-stat{background:var(--bg);border-radius:8px;padding:8px;text-align:center}
+.ag-stat .num{font-size:18px;font-weight:700;font-family:var(--mono);color:var(--accent)}
+.ag-stat .lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.perf-bar{background:var(--border);border-radius:3px;height:4px;overflow:hidden;margin-bottom:4px}
+.perf-fill{height:100%;border-radius:3px;background:var(--green)}
+.perf-label{font-size:10px;color:var(--muted)}
+.cred-box{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--muted);margin-top:8px}
+.cred-box strong{color:var(--text)}
+.import-zone{border:1.5px dashed var(--border);border-radius:var(--r-lg);padding:32px;text-align:center;cursor:pointer;transition:all .2s}
+.import-zone:hover,.import-zone.drag{border-color:var(--accent);background:var(--accentbg)}
+.import-icon{font-size:40px;margin-bottom:10px}
+.import-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.import-sub{font-size:12px;color:var(--muted)}
+.col-headers{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 0}
+.col-chip{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;font-weight:600;color:var(--text);text-align:center;font-family:var(--mono)}
+.preview-table{background:var(--bg);border-radius:8px;border:1px solid var(--border);max-height:280px;overflow-y:auto;margin-top:10px}
+.progress-import{background:var(--border);border-radius:4px;height:8px;overflow:hidden;margin:8px 0}
+.progress-import-fill{height:100%;background:var(--green);transition:width .3s}
+.assign-preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:14px}
+.assign-agent-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px}
+.assign-agent-name{font-size:13px;font-weight:600;margin-bottom:6px}
+.assign-count{font-size:11px;color:var(--muted)}
+.history-summary{padding:14px 18px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.hist-stat{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center}
+.hist-num{font-size:22px;font-weight:700;font-family:var(--mono)}
+.hist-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:16px;width:90%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal-h{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-h h3{font-size:15px;font-weight:600}
+.modal-cl{cursor:pointer;font-size:18px;color:var(--muted);line-height:1;transition:color .15s}
+.modal-cl:hover{color:var(--text)}
+.modal-b{padding:20px 22px}
+.modal-f{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.fg input,.fg select,.fg textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;font-size:13px;color:var(--text);outline:none;font-family:var(--font);transition:border .15s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent)}
+.fg textarea{resize:vertical;min-height:80px}
+.fg select option{background:var(--panel)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.info-box{background:var(--bluebg);border:1px solid var(--blue);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--blue);margin-top:8px;line-height:1.5}
+.info-box.purple{background:var(--purplebg);border-color:var(--purple);color:var(--purple)}
+.info-box.teal{background:var(--tealbg);border-color:var(--teal);color:var(--teal)}
+.toast{position:fixed;bottom:20px;right:20px;padding:12px 18px;border-radius:var(--r);font-size:13px;font-weight:500;opacity:0;transform:translateY(12px);transition:all .25s;z-index:9999;max-width:320px;background:var(--panel);border:1px solid var(--border);color:var(--text)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.ok{background:var(--greenbg);border-color:var(--green);color:var(--green)}
+.toast.err{background:var(--redbg);border-color:var(--red);color:var(--red)}
+.toast.info{background:var(--bluebg);border-color:var(--blue);color:var(--blue)}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-icon{font-size:32px;margin-bottom:8px}
+.empty-text{font-size:14px}
+
+/* ── BROADCAST PANEL ── */
+.channel-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.channel-card{background:var(--bg);border:2px solid var(--border);border-radius:var(--r-lg);padding:18px;cursor:pointer;transition:all .2s}
+.channel-card:hover,.channel-card.selected{border-color:var(--accent);background:var(--accentbg)}
+.channel-card.whatsapp:hover,.channel-card.whatsapp.selected{border-color:#25D366;background:rgba(37,211,102,.08)}
+.channel-card.sms:hover,.channel-card.sms.selected{border-color:var(--blue);background:var(--bluebg)}
+.channel-icon{font-size:32px;margin-bottom:8px}
+.channel-name{font-size:14px;font-weight:600;margin-bottom:3px}
+.channel-desc{font-size:11px;color:var(--muted)}
+.template-chip{background:var(--subtle);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;transition:all .15s;display:inline-block;margin:3px}
+.template-chip:hover{background:var(--accentbg);border-color:var(--accent);color:var(--accent)}
+.recipient-pill{display:inline-flex;align-items:center;gap:5px;background:var(--greenbg);border:1px solid var(--green);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--green);margin:3px}
+.broadcast-preview{background:var(--bg);border-radius:var(--r);padding:14px;border:1px solid var(--border);font-size:13px;color:var(--muted);min-height:60px;white-space:pre-wrap;line-height:1.7}
+.twilio-setup{background:var(--amberbg);border:1px solid var(--amber);border-radius:var(--r);padding:12px 14px;font-size:12px;color:var(--amber);margin-bottom:14px;line-height:1.7}
+.send-progress{background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin:8px 0;display:none}
+.send-progress-fill{height:100%;background:var(--green);transition:width .3s}
+
+/* ── MESSAGE INBOX ── */
+.inbox-layout{display:grid;grid-template-columns:280px 1fr;gap:0;height:calc(100vh - 140px);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+.inbox-list{border-right:1px solid var(--border);overflow-y:auto;background:var(--bg)}
+.inbox-item{padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.inbox-item:hover{background:var(--subtle)}
+.inbox-item.active{background:var(--accentbg);border-left:2px solid var(--accent)}
+.inbox-item.unread .inbox-name{font-weight:700;color:var(--text)}
+.inbox-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px}
+.inbox-preview{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inbox-time{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.inbox-dot{width:8px;height:8px;border-radius:50%;background:var(--purple);flex-shrink:0}
+.chat-area{display:flex;flex-direction:column;background:var(--panel)}
+.chat-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.chat-av{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg-bubble{max-width:72%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5}
+.msg-bubble.customer{align-self:flex-start;background:var(--subtle);color:var(--text);border-radius:12px 12px 12px 4px}
+.msg-bubble.admin{align-self:flex-end;background:var(--accent);color:#fff;border-radius:12px 12px 4px 12px}
+.msg-time{font-size:10px;opacity:.6;margin-top:3px;display:block;text-align:right}
+.chat-input-row{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--bg)}
+.chat-inp{flex:1;background:var(--subtle);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;font-size:13px;color:var(--text);outline:none;font-family:var(--font);transition:border .15s}
+.chat-inp:focus{border-color:var(--accent)}
+.chat-send{background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font)}
+.chat-send:hover{background:var(--accent2)}
+.no-chat{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:var(--muted)}
+
+/* ── NOBOX PANEL ── */
+.nobox-list-item{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);transition:background .1s}
+.nobox-list-item:hover{background:var(--bg)}
+.nobox-badge{background:var(--purplebg);color:var(--purple);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700}
+
+/* ── APP SCREEN TOGGLE (login vs dashboard) ── */
+.app-screen{display:none}
+.app-screen.active{display:block}
+
+@media(max-width:900px){
+  .shell{grid-template-columns:56px 1fr}
+  .brand-name,.brand-sub,.nav-item span,.admin-name,.admin-role,.logout-link{display:none}
+  .stat-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+  .channel-grid{grid-template-columns:1fr}
+  .inbox-layout{grid-template-columns:1fr}
+}
+@media(max-width:420px){
+  .stat-grid{grid-template-columns:repeat(auto-fit,minmax(100%,1fr))}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ LOGIN SCREEN ═══════════════════ -->
+<div class="app-screen active" id="screen-login">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F3F4F7;font-family:'DM Sans',sans-serif">
+    <div style="background:#FFFFFF;border:1px solid #E3E5EA;border-radius:16px;padding:40px;width:360px;box-shadow:0 4px 24px rgba(16,24,40,.08)">
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="font-size:40px;margin-bottom:10px">🍱</div>
+        <div style="font-size:20px;font-weight:700;color:#1A1D23">Lunchbox Admin</div>
+        <div style="font-size:13px;color:#6B7280;margin-top:4px">Sign in to continue</div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label for="loginEmail" style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px">Email</label>
+        <input id="loginEmail" type="email" style="width:100%;background:#F8F9FB;border:1px solid #E3E5EA;border-radius:10px;padding:10px 14px;font-size:13px;color:#1A1D23;outline:none;font-family:inherit" placeholder="admin@lunchbox.com">
+      </div>
+      <div style="margin-bottom:20px">
+        <label for="loginPass" style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px">Password</label>
+        <input id="loginPass" type="password" style="width:100%;background:#F8F9FB;border:1px solid #E3E5EA;border-radius:10px;padding:10px 14px;font-size:13px;color:#1A1D23;outline:none;font-family:inherit" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button onclick="doLogin()" style="width:100%;background:#E65100;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Sign In</button>
+      <div id="loginErr" style="color:#DC2626;font-size:12px;text-align:center;margin-top:10px;min-height:18px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ DASHBOARD SCREEN ═══════════════════ -->
+<div class="app-screen" id="screen-dashboard">
+<div class="shell">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="brand">
+    <div class="brand-mark">
+      <div class="brand-icon">🍱</div>
+      <div><div class="brand-name">Lunchbox</div><div class="brand-sub">Command Centre</div></div>
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active" onclick="nav('overview',this)"><span class="ni">◈</span><span>Dashboard</span></div>
+    <div class="nav-item" onclick="nav('delayed',this)">
+      <span class="ni">⚡</span><span>Delayed</span>
+      <span class="nav-badge" id="delayedBadge" style="display:none">0</span>
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Operations</div>
+    <div class="nav-item" onclick="nav('assign',this)"><span class="ni">🎯</span><span>Auto Assign</span></div>
+    <div class="nav-item" id="navItemDeliveries" onclick="nav('deliveries',this)"><span class="ni">📦</span><span>Deliveries</span></div>
+    <div class="nav-item" onclick="nav('customers',this)"><span class="ni">👥</span><span>Customers</span></div>
+    <div class="nav-item" onclick="nav('import',this)"><span class="ni">📊</span><span>Excel Import</span></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Communication</div>
+    <div class="nav-item" id="navItemInbox" onclick="nav('inbox',this)">
+      <span class="ni">💬</span><span>Customer Inbox</span>
+      <span class="nav-badge purple" id="inboxBadge" style="display:none">0</span>
+    </div>
+    <div class="nav-item" onclick="nav('broadcast',this)"><span class="ni">📣</span><span>Broadcast</span></div>
+    <div class="nav-item" id="navItemNobox" onclick="nav('nobox',this)">
+      <span class="ni">🚫</span><span>No Box Requests</span>
+      <span class="nav-badge blue" id="noboxBadge" style="display:none">0</span>
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Team</div>
+    <div class="nav-item" onclick="nav('agents',this)"><span class="ni">👤</span><span>Agents</span></div>
+    <div class="nav-item" onclick="nav('history',this)"><span class="ni">🗂</span><span>History</span></div>
+    <div class="nav-item" id="navItemAnalytics" onclick="nav('analytics',this)"><span class="ni">📈</span><span>Analytics</span></div>
+    <div class="nav-item" onclick="nav('reset',this)"><span class="ni">🔄</span><span>Daily Reset</span></div>
+  </div>
+  <div class="sidebar-foot">
+    <div class="admin-row">
+      <div class="admin-av" id="adminAv">A</div>
+      <div><div class="admin-name" id="adminName">Admin</div><div class="admin-role">Manager</div></div>
+    </div>
+    <span class="logout-link" onclick="doLogout()">Sign out</span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="page-title" id="pageTitle">Dashboard</div>
+    <div class="topbar-date" id="todayDate"></div>
+
+    <div class="live-pill"><div class="live-dot"></div>Live</div>
+    
+<button class="topbar-btn green-btn" id="btnMarkAllDelivered" onclick="markAllDelivered()" 
+  style="font-size:11px;padding:6px 14px">
+  ✅ Mark All Delivered
+</button>
+  </div>
+  <div class="content">
+
+    <!-- OVERVIEW -->
+    <div class="panel active" id="panel-overview">
+      <div class="stat-grid">
+        <div class="stat-card total clickable" id="card_ALL" onclick="goToFiltered('ALL')" title="View all today's deliveries"><div class="stat-num orange" id="ov_total">0</div><div class="stat-lbl">Total Today</div><div class="stat-sub" id="ov_date"></div></div>
+        <div class="stat-card pending clickable" id="card_Pending" onclick="goToFiltered('Pending')" title="View pending deliveries"><div class="stat-num amber" id="ov_pending">0</div><div class="stat-lbl">Pending</div><div class="stat-sub">Awaiting pickup</div></div>
+        <div class="stat-card done clickable" id="card_DONE" onclick="goToFiltered('DONE')" title="View completed deliveries"><div class="stat-num green" id="ov_done">0</div><div class="stat-lbl">Completed</div><div class="stat-sub">Picked + Delivered</div></div>
+        <div class="stat-card delayed clickable" id="card_Delayed" onclick="goToFiltered('Delayed')" title="View delayed deliveries"><div class="stat-num red" id="ov_delayed">0</div><div class="stat-lbl">Delayed</div><div class="stat-sub" id="ov_delayedSub">All clear</div></div>
+        <div class="stat-card nobox clickable" id="card_NoBox" onclick="goToFiltered('NoBox')" title="View no-box deliveries today"><div class="stat-num teal" id="ov_noboxtoday">0</div><div class="stat-lbl">No Box Today</div><div class="stat-sub">Marked no box</div></div>
+      </div>
+      <div class="stat-grid" style="margin-bottom:20px">
+        <div class="stat-card msgs clickable" id="card_msgs" onclick="nav('inbox',document.getElementById('navItemInbox'))" title="Open customer inbox"><div class="stat-num purple" id="ov_msgs">0</div><div class="stat-lbl">Unread Messages</div><div class="stat-sub">From customers</div></div>
+        <div class="stat-card nobox clickable" id="card_noboxtomorrow" onclick="nav('nobox',document.getElementById('navItemNobox'))" title="View no-box requests"><div class="stat-num teal" id="ov_nobox">0</div><div class="stat-lbl">No Box Tomorrow</div><div class="stat-sub">Opt-outs for next day</div></div>
+      </div>
+
+      <div class="progress-row">
+        <div class="progress-label">Completion</div>
+        <div class="progress-track"><div class="progress-fill" id="progressBar" style="width:0%"></div></div>
+        <div class="progress-pct" id="progressPct" style="color:var(--green)">0%</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="tcard">
+          <div class="tcard-head"><div class="tcard-title">Agent Load Today</div></div>
+          <div class="agent-mini-grid" id="agentLoadGrid" style="padding:14px"></div>
+        </div>
+        <div class="tcard">
+          <div class="tcard-head">
+            <div class="tcard-title">Recent Activity</div>
+            <button class="topbar-btn secondary" style="font-size:11px" onclick="nav('inbox',document.getElementById('navItemInbox'))">View Inbox</button>
+          </div>
+          <div id="recentActivity"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DELAYED -->
+    <div class="panel" id="panel-delayed">
+      <div style="background:var(--redbg);border:1px solid var(--red);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:22px">⚡</span>
+        <div>
+          <div style="font-weight:700;color:var(--red);font-size:14px">Delayed Deliveries — Act Now</div>
+          <div style="font-size:12px;color:var(--muted)" id="delayedInfo">Real-time delayed list</div>
+        </div>
+      </div>
+      <div class="tcard">
+        <div style="overflow-x:auto"><table>
+          <thead><tr><th>#</th><th>Box ID</th><th>Customer</th><th>Phone</th><th>Current Agent</th><th>Pickup Location</th><th>Reassign To</th></tr></thead>
+          <tbody id="delayedBody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- AUTO ASSIGN -->
+    <div class="panel" id="panel-assign">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div class="tcard" style="padding:20px">
+          <div style="font-size:15px;font-weight:600;margin-bottom:6px">Assign Today's Routes</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.7">
+            Reads all active customers → assigns to agents by zone → agents see deliveries in the app instantly.<br><br>
+            <span style="color:var(--amber);font-weight:600">Run every morning before agents start work.</span>
+          </div>
+          <button class="topbar-btn green-btn" onclick="runAssign()" style="width:100%;padding:10px;font-size:13px;margin-bottom:8px">🚀 Assign Today's Routes</button>
+          <button class="topbar-btn secondary" onclick="previewAssign()" style="width:100%;font-size:12px">👁 Preview (no changes)</button>
+          <div id="assignProgress" style="display:none;margin-top:10px">
+            <div class="progress-import"><div class="progress-import-fill" id="assignBar" style="width:0%"></div></div>
+            <div id="assignStatus" style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px"></div>
+          </div>
+        </div>
+        <div class="tcard" style="padding:20px">
+          <div style="font-size:15px;font-weight:600;margin-bottom:10px">Today's Numbers</div>
+          <div style="padding:10px;background:var(--bg);border-radius:8px;font-size:13px;margin-bottom:10px">
+            Active customers: <span id="activeCustomerCount" style="color:var(--green);font-weight:700">loading...</span><br>
+            Active agents: <span id="activeAgentCount" style="color:var(--accent);font-weight:700">loading...</span>
+          </div>
+          <details style="font-size:12px;color:var(--muted)">
+            <summary style="cursor:pointer;font-weight:600;color:var(--text)">How assignment works</summary>
+            <div style="line-height:2.1;margin-top:8px">
+              1. Customers with a preferred agent → assigned first<br>
+              2. Zone match → customer zone = agent zone<br>
+              3. Load balance → fewest deliveries gets next<br>
+              4. Pickup order → sorted alphabetically<br>
+              5. Status set to <span style="color:var(--amber);font-weight:600">Pending</span> automatically
+            </div>
+          </details>
+        </div>
+      </div>
+      <div class="tcard">
+        <div class="tcard-head"><div class="tcard-title">Assignment Preview</div></div>
+        <div class="assign-preview" id="assignPreview" style="padding:14px">
+          <div class="empty-state" style="grid-column:1/-1">Click "Preview" to see how customers will be distributed</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DELIVERIES -->
+    <div class="panel" id="panel-deliveries">
+      <div class="stat-grid" style="margin-bottom:16px">
+        <div class="stat-card total clickable" id="dlcard_ALL" onclick="applyDeliveryFilter('ALL')"><div class="stat-num orange" id="dl_total">0</div><div class="stat-lbl">Total</div></div>
+        <div class="stat-card pending clickable" id="dlcard_Pending" onclick="applyDeliveryFilter('Pending')"><div class="stat-num amber" id="dl_pending">0</div><div class="stat-lbl">Pending</div></div>
+        <div class="stat-card done clickable" id="dlcard_DONE" onclick="applyDeliveryFilter('DONE')"><div class="stat-num green" id="dl_done">0</div><div class="stat-lbl">Completed</div></div>
+        <div class="stat-card delayed clickable" id="dlcard_Delayed" onclick="applyDeliveryFilter('Delayed')"><div class="stat-num red" id="dl_delayed">0</div><div class="stat-lbl">Delayed</div></div>
+        <div class="stat-card nobox clickable" id="dlcard_NoBox" onclick="applyDeliveryFilter('NoBox')"><div class="stat-num teal" id="dl_nobox">0</div><div class="stat-lbl">No Box</div></div>
+      </div>
+      <div class="tcard">
+        <div class="tcard-head">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="tcard-title">Deliveries</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="f-btn on" data-status="ALL" onclick="applyDeliveryFilter('ALL')">All</button>
+              <button class="f-btn off" data-status="Pending" onclick="applyDeliveryFilter('Pending')">Pending</button>
+              <button class="f-btn off" data-status="Picked" onclick="applyDeliveryFilter('Picked')">Picked</button>
+              <button class="f-btn off red" data-status="Delayed" onclick="applyDeliveryFilter('Delayed')">Delayed</button>
+              <button class="f-btn off" data-status="Delivered" onclick="applyDeliveryFilter('Delivered')">Delivered</button>
+              <button class="f-btn off purple" data-status="NoBox" onclick="applyDeliveryFilter('NoBox')">No Box</button>
+            </div>
+          </div>
+          <div class="tc-controls">
+            <input class="search-box" id="searchQ" placeholder="Search name, phone or Box ID..." oninput="renderDeliveries()">
+            <select class="date-inp" id="agentFilter" onchange="renderDeliveries()" style="width:130px" title="Pick an agent to edit their route order below">
+              <option value="">All Agents</option>
+            </select>
+            <button class="topbar-btn secondary" onclick="saveRouteOrder()" title="Type a new position number next to any stop, then click here to save">💾 Save Route Order</button>
+            <button class="topbar-btn" onclick="openM('addDeliveryModal')">+ Add</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto"><table>
+          <thead><tr><th>#</th><th>Box ID</th><th>Customer</th><th>Pickup Address</th><th>Deliver To</th><th>Agent</th><th>Order</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="deliveryBody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS -->
+    <div class="panel" id="panel-customers">
+      <div class="tcard">
+        <div class="tcard-head">
+          <div class="tcard-title">Customer Master List</div>
+          <div class="tc-controls">
+            <input class="search-box" id="custSearch" placeholder="Search name, phone, Box ID or zone..." oninput="renderCustomers()">
+            <select class="date-inp" id="custSort" onchange="renderCustomers()" style="width:130px">
+              <option value="boxid">Sort: Box ID</option>
+              <option value="name">Sort: Name</option>
+              <option value="zone">Sort: Zone</option>
+            </select>
+            <select class="date-inp" id="custAgentFilter" onchange="renderCustomers()" style="width:150px">
+              <option value="">All Agents</option>
+            </select>
+            <button class="topbar-btn secondary" onclick="openM('addCustomerModal')">+ Add Customer</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto"><table>
+          <thead><tr><th>#</th><th>Box ID</th><th>Name</th><th>Phone</th><th>Pickup</th><th>Deliver To</th><th>Zone</th><th>Preferred Agent</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="customerBody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- EXCEL IMPORT -->
+    <div class="panel" id="panel-import">
+      <div style="max-width:700px">
+        <div class="tcard" style="margin-bottom:14px">
+          <div class="tcard-head">
+            <div class="tcard-title">Required Excel Columns</div>
+            <button class="topbar-btn secondary" onclick="downloadTemplate()">⬇ Download Template</button>
+          </div>
+          <div style="padding:14px 18px">
+            <div class="col-headers" style="grid-template-columns:repeat(6,1fr)">
+              <div class="col-chip">CustomerName</div><div class="col-chip">Phone</div>
+              <div class="col-chip">BoxID</div>
+              <div class="col-chip">PickupLocation</div><div class="col-chip">DeliveryAddress</div><div class="col-chip">Zone</div>
+            </div>
+            <div style="font-size:11px;color:var(--muted)">Optional: AgentUID, Notes, ItemCount</div>
+          </div>
+        </div>
+        <div class="tcard" style="margin-bottom:14px">
+          <div class="tcard-head"><div class="tcard-title">Agent UIDs</div></div>
+          <div style="overflow-x:auto"><table>
+            <thead><tr><th>Agent Name</th><th>Email</th><th>Zone</th><th>UID — click to copy</th></tr></thead>
+            <tbody id="uidBody"></tbody>
+          </table></div>
+        </div>
+        <div class="tcard">
+          <div class="tcard-head"><div class="tcard-title">Upload Excel File</div></div>
+          <div style="padding:16px">
+            <div class="import-zone" id="dropZone" onclick="document.getElementById('fileInput').click()" ondragover="dragOver(event)" ondragleave="dragLeave()" ondrop="dropFile(event)">
+              <div class="import-icon">📊</div>
+              <div class="import-title">Drop your Excel or CSV file here</div>
+              <div class="import-sub">Click to browse — imports to Customer Master List permanently</div>
+              <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="readFile(this.files[0])">
+            </div>
+            <div id="importPreviewSection" style="display:none;margin-top:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+                <strong id="importCount" style="font-size:13px;color:var(--green)"></strong>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <select id="overrideAgent" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:11px;color:var(--text);outline:none">
+                    <option value="">Assign all to one agent (optional)</option>
+                  </select>
+                  <button class="topbar-btn green-btn" onclick="importCustomers()">✅ Import All</button>
+                </div>
+              </div>
+              <div class="preview-table">
+                <table><thead><tr><th style="padding:8px 12px">#</th><th style="padding:8px 12px">Name</th><th style="padding:8px 12px">Phone</th><th style="padding:8px 12px">Box ID</th><th style="padding:8px 12px">Pickup</th><th style="padding:8px 12px">Zone</th></tr></thead>
+                <tbody id="previewBody"></tbody></table>
+              </div>
+              <div class="progress-import" id="importProgressWrap" style="display:none"><div class="progress-import-fill" id="importProgressFill" style="width:0%"></div></div>
+              <div id="importStatusText" style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- CUSTOMER INBOX                     -->
+    <!-- ══════════════════════════════════ -->
+    <div class="panel" id="panel-inbox">
+      <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:15px;font-weight:600">Customer Messages</div>
+          <div style="font-size:12px;color:var(--muted)">Reply to customer queries in real time</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <input class="search-box" id="inboxSearch" placeholder="Search customers..." oninput="filterInbox()">
+        </div>
+      </div>
+      <div class="inbox-layout">
+        <div class="inbox-list" id="inboxList">
+          <div class="empty-state"><div class="empty-icon">💬</div><div class="empty-text">No messages yet</div></div>
+        </div>
+        <div class="chat-area" id="chatArea">
+          <div class="no-chat"><div style="font-size:32px;margin-bottom:8px">💬</div><div style="font-size:13px">Select a conversation</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- BROADCAST                          -->
+    <!-- ══════════════════════════════════ -->
+    <div class="panel" id="panel-broadcast">
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
+
+        <!-- Left: composer -->
+        <div>
+          <div class="tcard" style="margin-bottom:14px;padding:20px">
+            <div style="font-size:15px;font-weight:600;margin-bottom:4px">Send Broadcast Message</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:18px">Send a message to all customers or a specific group via WhatsApp or SMS through Twilio.</div>
+
+            <div class="twilio-setup" id="twilioWarning">
+  ⚙️ <strong>WATI Setup Required:</strong> Enter your WATI API endpoint and access token below to enable sending. Get them from your WATI dashboard under Settings → API Docs.
+</div>
+
+            <!-- Channel selector -->
+            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">1. Choose Channel</div>
+            <div class="channel-grid" style="grid-template-columns:1fr">
+  <div class="channel-card whatsapp selected" id="ch-whatsapp">
+    <div class="channel-icon">💬</div>
+    <div class="channel-name">WhatsApp</div>
+    <div class="channel-desc">Send via WhatsApp Business API through WATI</div>
+  </div>
+</div>
+
+            <!-- Recipients -->
+            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">2. Recipients</div>
+            <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+              <button class="f-btn on" id="rec-all" onclick="selectRecipients('all',this)">All Customers</button>
+              <button class="f-btn off" id="rec-zone" onclick="selectRecipients('zone',this)">By Zone</button>
+              <button class="f-btn off" id="rec-nobox" onclick="selectRecipients('nobox',this)">No Box Tomorrow</button>
+            </div>
+            <div id="zoneSelector" style="display:none;margin-bottom:10px">
+              <select class="date-inp" id="broadcastZone" style="width:200px">
+                <option value="">Select Zone...</option>
+              </select>
+            </div>
+            <div id="recipientCount" style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:16px">
+              All customers will receive this message
+            </div>
+
+            <!-- Message -->
+            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">3. Message</div>
+            <div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:0">
+              <span style="font-size:11px;color:var(--muted);margin-bottom:6px;width:100%">Quick templates:</span>
+              <span class="template-chip" onclick="useTemplate('holiday')">🏖️ Holiday Notice</span>
+              <span class="template-chip" onclick="useTemplate('delay')">⚡ Route Delay</span>
+              <span class="template-chip" onclick="useTemplate('nobox')">📦 No Box Reminder</span>
+              <span class="template-chip" onclick="useTemplate('menu')">🍛 Delivered message</span>
+              <span class="template-chip" onclick="useTemplate('price')">💰 Price Change</span>
+            </div>
+            <div class="fg" style="margin-bottom:10px">
+              <textarea class="chat-inp" id="broadcastMsg" rows="5" placeholder="Type your message here... Use {name} for customer name, {boxid} for Box ID, {date} for today's date" oninput="updatePreview()" style="width:100%;resize:vertical;min-height:100px"></textarea>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:16px"><span id="broadcastCharCount">0</span> / 1000 characters</div>
+
+            <!-- Send -->
+            <button class="topbar-btn" id="broadcastSendBtn" onclick="openM('broadcastConfirmModal')" style="width:100%;padding:12px;font-size:14px;font-weight:600">
+              📣 Send Broadcast
+            </button>
+            <div class="send-progress" id="sendProgress">
+              <div class="send-progress-fill" id="sendProgressFill" style="width:0%"></div>
+            </div>
+            <div id="sendStatusText" style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px"></div>
+          </div>
+        </div>
+
+        <!-- Right: settings + preview -->
+        <div>
+         <div class="tcard" style="margin-bottom:14px;padding:18px">
+  <div style="font-size:14px;font-weight:600;margin-bottom:12px">⚙️ WATI Settings</div>
+  <div class="fg">
+    <label>API Endpoint</label>
+    <input id="watiEndpoint" placeholder="https://live-mt-server.wati.io/123456">
+  </div>
+  <div class="fg">
+    <label>Access Token</label>
+    <input id="watiToken" type="password" placeholder="••••••••••••••••">
+  </div>
+  <div class="fg">
+    <label>Template Name (must match an approved WATI template)</label>
+    <input id="watiTemplateName" placeholder="e.g. holiday_notice">
+  </div>
+  <button class="topbar-btn green-btn" onclick="saveWatiConfig()" style="width:100%">Save Credentials</button>
+  <div class="info-box teal" style="margin-top:10px">
+    Credentials are saved locally in your browser. WhatsApp requires an approved template for broadcasts outside a 24-hour chat window — create templates in your WATI dashboard first.
+  </div>
+</div>
+
+          <div class="tcard" style="padding:18px">
+            <div style="font-size:14px;font-weight:600;margin-bottom:10px">Message Preview</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">How it looks to the customer</div>
+            <div style="background:#E8F5E9;border-radius:12px;padding:14px;position:relative">
+              <div style="font-size:10px;color:#555;margin-bottom:6px;font-weight:700">🍱 Lunchbox</div>
+              <div class="broadcast-preview" id="msgPreview" style="background:transparent;border:none;padding:0;color:#212121;font-size:13px">
+                Your message preview will appear here...
+              </div>
+            </div>
+            <div style="margin-top:12px;font-size:12px;color:var(--muted)">
+              Broadcast history saved to Firestore for audit trail.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Broadcast log -->
+      <div class="tcard" style="margin-top:4px">
+        <div class="tcard-head"><div class="tcard-title">Broadcast History</div></div>
+        <div style="overflow-x:auto"><table>
+          <thead><tr><th>Date/Time</th><th>Channel</th><th>Message</th><th>Recipients</th><th>Status</th></tr></thead>
+          <tbody id="broadcastLog"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- NO BOX REQUESTS                    -->
+    <!-- ══════════════════════════════════ -->
+    <div class="panel" id="panel-nobox">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+        <div class="stat-card nobox"><div class="stat-num teal" id="nb_tomorrow">0</div><div class="stat-lbl">Tomorrow</div></div>
+        <div class="stat-card pending"><div class="stat-num amber" id="nb_today">0</div><div class="stat-lbl">Today</div></div>
+        <div class="stat-card done"><div class="stat-num green" id="nb_total">0</div><div class="stat-lbl">All Time</div></div>
+      </div>
+      <div class="tcard">
+        <div class="tcard-head">
+          <div class="tcard-title">No Box Requests</div>
+          <div class="tc-controls">
+            <input type="date" class="date-inp" id="noboxDateFilter">
+            <button class="topbar-btn secondary" onclick="loadNoBoxRequests()">Filter</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto"><table>
+          <thead><tr><th>#</th><th>Customer</th><th>Phone</th><th>Date</th><th>Requested At</th><th>Status</th></tr></thead>
+          <tbody id="noboxBody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- AGENTS -->
+    <div class="panel" id="panel-agents">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div>
+          <div style="font-size:15px;font-weight:600">Delivery Agents</div>
+          <div style="font-size:12px;color:var(--muted)">Manage team, credentials and performance</div>
+        </div>
+        <button class="topbar-btn" onclick="openM('addAgentModal')">+ Add Agent</button>
+      </div>
+      <div class="agent-grid" id="agentGrid">
+        <div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">👤</div><div class="empty-text">Loading agents...</div></div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="panel" id="panel-history">
+      <div class="tcard">
+        <div class="tcard-head">
+          <div class="tcard-title">Delivery History</div>
+          <div class="tc-controls">
+            <input type="date" class="date-inp" id="histDate">
+            <button class="topbar-btn" onclick="loadHistory()">Load</button>
+            <button class="topbar-btn purple-btn" onclick="nav('analytics', document.getElementById('navItemAnalytics'))">📈 Analytics</button>
+          </div>
+        </div>
+        <div id="historySummary" style="display:none" class="history-summary">
+          <div class="hist-stat"><div class="hist-num" id="hs_total" style="color:var(--accent)">0</div><div class="hist-lbl">Total</div></div>
+          <div class="hist-stat"><div class="hist-num" id="hs_done" style="color:var(--green)">0</div><div class="hist-lbl">Delivered</div></div>
+          <div class="hist-stat"><div class="hist-num" id="hs_delayed" style="color:var(--red)">0</div><div class="hist-lbl">Delayed</div></div>
+          <div class="hist-stat"><div class="hist-num" id="hs_rate" style="color:var(--accent)">0%</div><div class="hist-lbl">Success Rate</div></div>
+        </div>
+        <div style="overflow-x:auto"><table>
+          <thead><tr><th>#</th><th>Customer</th><th>Phone</th><th>Agent</th><th>Status</th><th>Picked Time</th></tr></thead>
+          <tbody id="histBody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="panel" id="panel-analytics">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:15px;font-weight:600">Customer &amp; Agent Analytics</div>
+          <div style="font-size:12px;color:var(--muted)" id="analyticsScopeLabel">All-time performance, built from your daily History archives</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select class="date-inp" id="analyticsScope" onchange="onAnalyticsScopeChange()">
+            <option value="all">All Time</option>
+            <option value="month">Specific Month</option>
+          </select>
+          <input type="month" class="date-inp" id="analyticsMonthPicker" style="display:none" onchange="loadAnalytics()">
+          <button class="topbar-btn secondary" onclick="loadAnalytics(true)">↻ Refresh</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+        <button class="f-btn on" id="atab-customers" onclick="analyticsTab('customers',this)">👥 Customers</button>
+        <button class="f-btn off" id="atab-agents" onclick="analyticsTab('agents',this)">🚴 Agents</button>
+      </div>
+
+      <div id="analyticsLoading" style="display:none" class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Crunching delivery history…</div></div>
+
+      <!-- CUSTOMERS VIEW -->
+      <div id="analyticsCustomersView">
+        <div class="stat-grid" style="margin-bottom:16px">
+          <div class="stat-card total"><div class="stat-num orange" id="an_totalCust">0</div><div class="stat-lbl">Customers Tracked</div></div>
+          <div class="stat-card pending"><div class="stat-num amber" id="an_totalDelayedFlag">0</div><div class="stat-lbl" id="an_totalDelayedFlagLbl">Delay Flags (All Time)</div></div>
+          <div class="stat-card delayed"><div class="stat-num red" id="an_totalEndedDelayed">0</div><div class="stat-lbl" id="an_totalEndedDelayedLbl">Ended Delayed (All Time)</div></div>
+          <div class="stat-card nobox"><div class="stat-num teal" id="an_totalNoboxReq">0</div><div class="stat-lbl" id="an_totalNoboxReqLbl">No Box Requests (All Time)</div></div>
+        </div>
+        <div class="tcard">
+          <div class="tcard-head">
+            <div class="tcard-title">Customer Breakdown <span style="font-weight:400;color:var(--muted);font-size:11px">— click a row for full detail</span></div>
+            <div class="tc-controls">
+              <input class="search-box" id="analyticsCustSearch" placeholder="Search name, Box ID or zone..." oninput="drawAnalyticsCustomerTable()">
+            </div>
+          </div>
+          <div style="overflow-x:auto"><table>
+            <thead><tr><th>#</th><th>Box ID</th><th>Name</th><th>Zone</th><th>Total</th><th>No Box (Agent)</th><th>Times Delayed</th><th>Ended Delayed</th><th>No Box Requests</th></tr></thead>
+            <tbody id="analyticsCustomerBody"><tr><td colspan="9" class="empty-state"><div class="empty-text">Open this tab to load data</div></td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- AGENTS VIEW -->
+      <div id="analyticsAgentsView" style="display:none">
+        <div class="tcard">
+          <div class="tcard-head"><div class="tcard-title" id="analyticsAgentTitle">Agent Performance (All-Time) <span style="font-weight:400;color:var(--muted);font-size:11px">— click a row for full detail</span></div></div>
+          <div style="overflow-x:auto"><table>
+            <thead><tr><th>#</th><th>Agent</th><th>Zone</th><th>Total Handled</th><th>Completed</th><th>Ended Delayed</th><th>Completion Rate</th></tr></thead>
+            <tbody id="analyticsAgentBody"><tr><td colspan="7" class="empty-state"><div class="empty-text">Open this tab to load data</div></td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESET -->
+    <div class="panel" id="panel-reset">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div class="tcard" style="padding:20px">
+          <div style="font-size:15px;font-weight:600;margin-bottom:6px">Customer PIN</div>
+
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7">
+            This 4-digit PIN is shared by all customers to log in to the customer app using their Box ID.
+          </div>
+          <div class="fg">
+            <label>Global 4-Digit PIN</label>
+            <input id="globalPinInp" type="tel" maxlength="4" inputmode="numeric" placeholder="e.g. 1234" oninput="this.value=this.value.replace(/\D/g,'')">
+          </div>
+          <button class="topbar-btn green-btn" onclick="saveGlobalPin()" style="width:100%">Save PIN</button>
+          <div id="pinSaveMsg" style="display:none;margin-top:8px;font-size:12px;color:var(--green);font-weight:600"></div>
+        </div>
+        <div class="tcard" style="padding:20px">
+          <details open>
+            <summary style="cursor:pointer;font-size:13px;font-weight:600">ℹ️ About Box ID Login</summary>
+            <div style="font-size:12px;color:var(--muted);line-height:2;margin-top:8px">
+              Customers enter their unique Box ID (e.g. LB-001) + the global PIN to sign in.<br>
+              No OTP or phone auth required.<br>
+              Session stays active on their device until they sign out.<br>
+              <span style="color:var(--amber);font-weight:600">Keep the PIN private — share it only with your customers.</span>
+            </div>
+          </details>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+              <div id="rs_total" style="font-size:22px;font-weight:700;color:var(--accent)">0</div>
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Total</div>
+            </div>
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+              <div id="rs_rate" style="font-size:22px;font-weight:700;color:var(--green)">0%</div>
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Completed</div>
+            </div>
+          </div>
+          <button class="topbar-btn" id="btnReset" onclick="triggerReset()" style="width:100%">Archive &amp; Reset for Tomorrow</button>
+          <div id="resetResultMsg" style="display:none;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;background:var(--greenbg);color:var(--green);border:1px solid var(--green)"></div>
+        </div>
+        <div class="tcard" style="padding:20px">
+          <details>
+            <summary style="cursor:pointer;font-size:15px;font-weight:600">What reset does</summary>
+            <div style="font-size:12px;color:var(--muted);line-height:2;margin-top:8px">
+              1. Copies all deliveries to history/{date}/<br>
+              2. Writes completion summary stats<br>
+              3. Deletes all from deliveries/ collection<br>
+              4. Next morning → Auto Assign creates fresh routes<br>
+              5. History stays until you archive/export it — see Analytics → Storage for free-tier limits
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- /screen-dashboard -->
+
+<!-- ══ MODALS ══ -->
+<div class="modal-overlay" id="addDeliveryModal">
+  <div class="modal">
+    <div class="modal-h"><h3>Add Delivery Manually</h3><span class="modal-cl" onclick="closeM('addDeliveryModal')">✕</span></div>
+    <div class="modal-b">
+      <div class="fg"><label for="dBx">Box ID (optional)</label><input id="dBx" placeholder="e.g. LB-001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fr"><div class="fg"><label for="dN">Customer Name</label><input id="dN"></div><div class="fg"><label for="dPh">Phone</label><input id="dPh"></div></div>
+      <div class="fg"><label for="dPk">Pickup Location</label><input id="dPk"></div>
+      <div class="fg"><label for="dAd">Delivery Address</label><input id="dAd"></div>
+      <div class="fr"><div class="fg"><label for="dAg">Assign To Agent</label><select id="dAg"><option value="">Select agent...</option></select></div><div class="fg"><label for="dIt">Item Count</label><input id="dIt" type="number" min="1" placeholder="1"></div></div>
+      <div class="fg"><label for="dNo">Notes (optional)</label><input id="dNo" placeholder="Special instructions..."></div>
+    </div>
+    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('addDeliveryModal')">Cancel</button><button class="topbar-btn" onclick="addDelivery()">Add Delivery</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addCustomerModal">
+  <div class="modal">
+    <div class="modal-h"><h3>Add Customer to Master List</h3><span class="modal-cl" onclick="closeM('addCustomerModal')">✕</span></div>
+    <div class="modal-b">
+      <div class="fr"><div class="fg"><label for="cN">Full Name</label><input id="cN"></div><div class="fg"><label for="cPh">Phone</label><input id="cPh"></div></div>
+      <div class="fr"><div class="fg"><label for="cBx">Box ID</label><input id="cBx" placeholder="e.g. LB-001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="liveCheckBoxId('cBx',null)"><div id="cBxWarn" style="font-size:11px;color:var(--red);margin-top:4px;display:none"></div></div><div class="fg"><label for="cZn">Zone</label><input id="cZn" placeholder="north / south / east"></div></div>
+      <div class="fg"><label for="cPk">Pickup Location</label><input id="cPk"></div>
+      <div class="fg"><label for="cAd">Delivery Address</label><input id="cAd"></div>
+      <div class="fr"><div class="fg"><label for="cAg">Preferred Agent</label><select id="cAg"><option value="">Auto-assign</option></select></div><div class="fg"><label for="cNo">Notes</label><input id="cNo" placeholder="e.g. 2nd floor"></div></div>
+      <div class="info-box">Added to permanent master list. Auto Assign will include them every morning.</div>
+    </div>
+    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('addCustomerModal')">Cancel</button><button class="topbar-btn" onclick="addCustomer()">Add Customer</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editCustomerModal">
+  <div class="modal">
+    <div class="modal-h"><h3>Edit Customer</h3><span class="modal-cl" onclick="closeM('editCustomerModal')">✕</span></div>
+    <div class="modal-b">
+      <input type="hidden" id="ecId">
+      <div class="fr"><div class="fg"><label for="ecN">Full Name</label><input id="ecN"></div><div class="fg"><label for="ecPh">Phone</label><input id="ecPh"></div></div>
+      <div class="fr"><div class="fg"><label for="ecBx">Box ID</label><input id="ecBx" placeholder="e.g. LB-001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="liveCheckBoxId('ecBx',document.getElementById('ecId').value)"><div id="ecBxWarn" style="font-size:11px;color:var(--red);margin-top:4px;display:none"></div></div><div class="fg"><label for="ecZn">Zone</label><input id="ecZn" placeholder="north / south / east"></div></div>
+      <div class="fg"><label for="ecPk">Pickup Location</label><input id="ecPk"></div>
+      <div class="fg"><label for="ecAd">Delivery Address</label><input id="ecAd"></div>
+      <div class="fr"><div class="fg"><label for="ecAg">Preferred Agent</label><select id="ecAg"><option value="">Auto-assign</option></select></div><div class="fg"><label for="ecNo">Notes</label><input id="ecNo" placeholder="e.g. 2nd floor"></div></div>
+      <div class="info-box">Changing "Preferred Agent" here only affects future Auto Assign runs — it won't move today's already-created deliveries. Use Reassign in the Deliveries tab for that.</div>
+    </div>
+    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('editCustomerModal')">Cancel</button><button class="topbar-btn" onclick="saveCustomerEdit()">Save Changes</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addAgentModal">
+  <div class="modal">
+    <div class="modal-h"><h3>Add New Delivery Agent</h3><span class="modal-cl" onclick="closeM('addAgentModal')">✕</span></div>
+    <div class="modal-b">
+      <div class="fr"><div class="fg"><label for="aN">Full Name</label><input id="aN"></div><div class="fg"><label for="aPh">Phone</label><input id="aPh"></div></div>
+      <div class="fg"><label for="aEm">Email (login to app)</label><input id="aEm" type="email"></div>
+      <div class="fr"><div class="fg"><label for="aPw">Password (min 6 chars)</label><input id="aPw" type="password"></div><div class="fg"><label for="aZn">Zone</label><input id="aZn" placeholder="north / south"></div></div>
+      <div class="fg"><label for="aMx">Max Deliveries Per Day</label><input id="aMx" type="number" placeholder="30" min="1"></div>
+    </div>
+    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('addAgentModal')">Cancel</button><button class="topbar-btn" id="createAgentBtn" onclick="createAgent()">Create Agent</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editAgentModal">
+  <div class="modal">
+    <div class="modal-h"><h3>Edit Agent</h3><span class="modal-cl" onclick="closeM('editAgentModal')">✕</span></div>
+    <div class="modal-b">
+      <input type="hidden" id="eaUid">
+      <div class="fr"><div class="fg"><label for="eaN">Full Name</label><input id="eaN"></div><div class="fg"><label for="eaPh">Phone</label><input id="eaPh"></div></div>
+      <div class="fr"><div class="fg"><label for="eaZn">Zone</label><input id="eaZn" placeholder="north / south"></div><div class="fg"><label for="eaMx">Max Deliveries Per Day</label><input id="eaMx" type="number" min="1"></div></div>
+      <div class="fg"><label for="eaEm">Email (login) — read only</label><input id="eaEm" disabled style="opacity:.6;cursor:not-allowed"></div>
+      <div class="info-box">Email and password can't be changed from here — those are Firebase Auth login credentials, not part of this profile. Changing them requires the agent to reset their own password, or an admin backend (Cloud Function).</div>
+    </div>
+    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('editAgentModal')">Cancel</button><button class="topbar-btn" onclick="saveAgentEdit()">Save Changes</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="broadcastConfirmModal">
+  <div class="modal">
+    <div class="modal-h"><h3>Confirm Broadcast</h3><span class="modal-cl" onclick="closeM('broadcastConfirmModal')">✕</span></div>
+    <div class="modal-b">
+      <div style="text-align:center;font-size:36px;margin-bottom:12px">📣</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:8px;text-align:center">Ready to send?</div>
+      <div id="broadcastConfirmDetails" style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:16px;line-height:1.8"></div>
+      <div style="background:var(--bg);border-radius:var(--r);padding:12px;font-size:12px;color:var(--text);margin-bottom:12px;border:1px solid var(--border)" id="broadcastConfirmMsg"></div>
+      <div class="info-box" style="margin-bottom:0">This will use Twilio API and may incur charges. Standard SMS/WhatsApp rates apply.</div>
+    </div>
+    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('broadcastConfirmModal')">Cancel</button><button class="topbar-btn purple-btn" onclick="executeBroadcast()">Send Now →</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="customerAnalyticsModal">
+  <div class="modal">
+    <div class="modal-h"><h3 id="caTitle">Customer</h3><span class="modal-cl" onclick="closeM('customerAnalyticsModal')">✕</span></div>
+    <div class="modal-b" id="caBody"></div>
+    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('customerAnalyticsModal')">Close</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="agentAnalyticsModal">
+  <div class="modal">
+    <div class="modal-h"><h3 id="aaTitle">Agent</h3><span class="modal-cl" onclick="closeM('agentAnalyticsModal')">✕</span></div>
+    <div class="modal-b" id="aaBody"></div>
+    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('agentAnalyticsModal')">Close</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══ FIREBASE CONFIG ══
+const firebaseConfig = {
+  apiKey:            "REMOVE",
+  authDomain:        "REMOVED",
+  projectId:         "lunchboxdelivery-3d673",
+  storageBucket:     "lunchboxdelivery-3d673.firebasestorage.app",
+  messagingSenderId: "979213722326",
+  appId:             "REMOVED"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let allDeliveries=[], agents={}, allCustomers=[], parsedData=[], curFilter='ALL';
+let inboxConvos={}, activeConvoId=null, msgListeners=[];
+let broadcastChannel='whatsapp', broadcastRecipient='all';
+let analyticsLoaded=false, analyticsCustomers=[], analyticsAgents=[];
+
+const today    = new Date().toISOString().split('T')[0];
+const tomorrow = new Date(Date.now()+86400000).toISOString().split('T')[0];
+const yesterday = new Date(Date.now()-86400000).toISOString().split('T')[0];
+document.getElementById('todayDate').textContent =
+  new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+document.getElementById('ov_date').textContent = today;
+
+// ── AUTO SCHEDULE (runs only while this dashboard tab is open — see notes) ──
+const AUTO_RESET_HOUR  = 17; // 5 PM — Daily Reset fires automatically after this hour if not already done today
+const AUTO_ASSIGN_HOUR = 10; // 10 AM — Auto Assign fires automatically after this hour if not already done today
+function checkAutoSchedule(){
+  const hh = new Date().getHours();
+  db.collection('config').doc('app').get().then(snap=>{
+    const d = snap.exists ? snap.data() : {};
+    if (hh >= AUTO_RESET_HOUR  && d.lastAutoReset  !== today) triggerReset(true);
+    if (hh >= AUTO_ASSIGN_HOUR && d.lastAutoAssign !== today) runAssign(true);
+  }).catch(()=>{});
+}
+
+// ── AUTH ──
+// TEMPORARY: still requires a real Firebase Auth login (so Firestore's
+// request.auth != null rules pass), but skips the admin-role check that
+// was bouncing you back to the login screen. Re-enable the role check
+// once your users/{uid} doc + role field are confirmed correct.
+auth.onAuthStateChanged(u => {
+  if (!u) { showLoginPage(); return; }
+  showDashboard();
+  db.collection('users').doc(u.uid).get().then(d => {
+    const nm = (d.exists && d.data().name) || u.email || 'Admin';
+    document.getElementById('adminName').textContent = nm;
+    document.getElementById('adminAv').textContent = nm.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  }).catch(err => {
+    console.warn('Could not load admin profile doc (continuing anyway):', err.code, err.message);
+    document.getElementById('adminName').textContent = u.email || 'Admin';
+    document.getElementById('adminAv').textContent = 'AD';
+  });
+  loadAgents(); listenDeliveries(); loadCustomers();
+  listenInbox(); listenNoBox(); listenAdminNotifications();
+  loadTwilioConfig();
+  checkAutoSchedule();
+  setInterval(checkAutoSchedule, 60000);
+});
+
+/* ORIGINAL VERSION WITH STRICT ADMIN-ROLE CHECK — restore this once
+   users/{uid}.role === 'admin' is confirmed to exist and be readable:
+auth.onAuthStateChanged(u => {
+  if (!u) { showLoginPage(); return; }
+  db.collection('users').doc(u.uid).get().then(d => {
+    if (!d.exists || d.data().role !== 'admin') { auth.signOut(); showLoginPage(); return; }
+    showDashboard();
+    const nm = d.data().name || 'Admin';
+    document.getElementById('adminName').textContent = nm;
+    document.getElementById('adminAv').textContent = nm.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    loadAgents(); listenDeliveries(); loadCustomers();
+    listenInbox(); listenNoBox(); listenAdminNotifications();
+    loadTwilioConfig();
+    checkAutoSchedule();
+    setInterval(checkAutoSchedule, 60000);
+  }).catch(err => {
+  console.error('USER DOC ERROR:', err.code, err.message);
+  showLoginPage();
+});
+});
+*/
+
+
+function showLoginPage() {
+  document.getElementById('screen-dashboard').classList.remove('active');
+  document.getElementById('screen-login').classList.add('active');
+  const err = document.getElementById('loginErr');
+  if (err) err.textContent = '';
+}
+function showDashboard() {
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-dashboard').classList.add('active');
+}
+function doLogin() {
+  const e=document.getElementById('loginEmail').value.trim(), p=document.getElementById('loginPass').value;
+  if(!e||!p){document.getElementById('loginErr').textContent='Enter email and password';return;}
+  auth.signInWithEmailAndPassword(e,p).catch(err=>{
+    document.getElementById('loginErr').textContent = (err.code==='auth/wrong-password'||err.code==='auth/user-not-found'||err.code==='auth/invalid-credential') ? 'Wrong email or password.' : err.message;
+  });
+}
+
+// ── NAV ──
+const panelTitles={overview:'Dashboard',delayed:'Delayed Deliveries',assign:'Auto Assign',deliveries:'Deliveries',customers:'Customer Master List',import:'Excel Import',inbox:'Customer Inbox',broadcast:'Broadcast Message',nobox:'No Box Requests',agents:'Delivery Agents',history:'History',analytics:'Analytics',reset:'Daily Reset'};
+function nav(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  document.getElementById('pageTitle').textContent=panelTitles[id]||id;
+  const markBtn=document.getElementById('btnMarkAllDelivered');
+  if(markBtn) markBtn.style.display = (id==='overview'||id==='deliveries') ? '' : 'none';
+  if(id==='inbox') loadInboxPanel();
+  if(id==='nobox') loadNoBoxRequests();
+  if(id==='broadcast') loadBroadcastLog();
+  if(id==='reset') loadGlobalPin();
+  if(id==='analytics' && !analyticsLoaded) loadAnalytics();
+}
+
+// ── AGENTS ──
+function loadAgents(){
+  db.collection('users').where('role','==','delivery').get().then(snap=>{
+    agents={};
+    let grid='',agOpts='<option value="">Select agent...</option>',uidRows='',zones=new Set();
+    let count=0;
+    const docs=snap.docs.slice().sort((a,b)=>(a.data().name||'').localeCompare(b.data().name||'',undefined,{numeric:true,sensitivity:'base'}));
+    docs.forEach(doc=>{
+      const d=doc.data(); count++;
+      agents[doc.id]={name:d.name||'?',fcmToken:d.fcmToken||'',zone:d.zone||'',maxDeliveries:d.maxDeliveries||999,email:d.email||'',phone: d.phone || '' };
+      const ini=(d.name||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const tot=d.totalDeliveries||0,dn=d.completedDeliveries||0,pct=tot>0?Math.round((dn*100)/tot):0;
+      if(d.zone) zones.add(d.zone.toLowerCase());
+      grid+=`<div class="agent-card"><div class="ag-top"><div class="ag-av">${ini}</div><div><div class="ag-name">${d.name||'?'}</div><div class="ag-email">${d.email||''}</div><div class="ag-email">Zone: ${d.zone||'—'}</div></div></div><div class="ag-stats"><div class="ag-stat"><div class="num" id="agTot_${doc.id}">${tot}</div><div class="lbl">Total</div></div><div class="ag-stat"><div class="num" id="agDone_${doc.id}">${dn}</div><div class="lbl">Done</div></div><div class="ag-stat"><div class="num" id="agRate_${doc.id}" style="color:var(--accent)">${pct}%</div><div class="lbl">Rate</div></div></div><div class="perf-bar"><div class="perf-fill" id="agBar_${doc.id}" style="width:${pct}%"></div></div><div class="perf-label" id="agPerfLbl_${doc.id}">Performance: ${pct}%</div>${d.email?`<div class="cred-box">Login: <strong>${d.email}</strong></div>`:''}<button class="topbar-btn secondary" style="width:100%;margin-top:10px;font-size:12px" onclick="openEditAgent('${doc.id}')">✏️ Edit Agent</button></div>`;
+      agOpts+=`<option value="${doc.id}">${d.name||'?'}</option>`;
+      uidRows+=`<tr><td><strong>${d.name||'?'}</strong></td><td style="color:var(--muted)">${d.email||''}</td><td style="color:var(--muted)">${d.zone||'—'}</td><td><code style="font-family:var(--mono);font-size:10px;cursor:pointer;color:var(--accent)" onclick="copyUID('${doc.id}')" title="Click to copy">${doc.id}</code></td></tr>`;
+    });
+    document.getElementById('agentGrid').innerHTML=grid||'<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">👤</div><div class="empty-text">No agents yet.</div></div>';
+    document.getElementById('uidBody').innerHTML=uidRows||'<tr><td colspan="4" class="empty-state"><div class="empty-text">No agents yet</div></td></tr>';
+    ['dAg','cAg','ecAg','overrideAgent'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=agOpts;});
+    let agFilt='<option value="">All Agents</option>';
+    Object.entries(agents).forEach(([uid,a])=>agFilt+=`<option value="${uid}">${a.name}</option>`);
+    const af=document.getElementById('agentFilter');if(af)af.innerHTML=agFilt;
+    const caf=document.getElementById('custAgentFilter');if(caf)caf.innerHTML=agFilt;
+    const aac=document.getElementById('activeAgentCount');if(aac)aac.textContent=count+' agent'+(count!==1?'s':'');
+    // Populate zone selector for broadcast
+    const zSel=document.getElementById('broadcastZone');
+    if(zSel){zSel.innerHTML='<option value="">Select Zone...</option>';zones.forEach(z=>zSel.innerHTML+=`<option value="${z}">${z}</option>`);}
+    renderAgentLoad();
+    // Fill in real all-time Total/Done/Rate per agent (the totalDeliveries/
+    // completedDeliveries fields on the user doc are never written to by the
+    // app, so those always show 0 — this replaces them with numbers computed
+    // from actual archived history).
+    loadHistoryCache().then(applyAgentPerfToCards).catch(()=>{});
+  }).catch(e=>toast('Could not load agents: '+e.message,'err'));
+}
+
+// Compute each agent's all-time total/completed/rate from the cached history
+// and patch the numbers into the already-rendered agent cards, without a
+// full re-render (avoids flicker and keeps this cheap to call often).
+function applyAgentPerfToCards(historyDocs){
+  const perf={};
+  (historyDocs||[]).forEach(d=>{
+    const uid=d.assignedTo; if(!uid) return;
+    if(!perf[uid]) perf[uid]={total:0,done:0};
+    perf[uid].total++;
+    if(d.status==='Delivered'||d.status==='Picked') perf[uid].done++;
+  });
+  Object.keys(agents).forEach(uid=>{
+    const p=perf[uid]||{total:0,done:0};
+    const pct = p.total>0 ? Math.round((p.done*100)/p.total) : 0;
+    const tEl=document.getElementById('agTot_'+uid), dEl=document.getElementById('agDone_'+uid),
+          rEl=document.getElementById('agRate_'+uid), bEl=document.getElementById('agBar_'+uid),
+          lEl=document.getElementById('agPerfLbl_'+uid);
+    if(tEl) tEl.textContent=p.total;
+    if(dEl) dEl.textContent=p.done;
+    if(rEl) rEl.textContent=pct+'%';
+    if(bEl) bEl.style.width=pct+'%';
+    if(lEl) lEl.textContent='Performance: '+pct+'% (all-time)';
+  });
+}
+
+// ── DELIVERIES LISTENER ──
+function listenDeliveries(){
+  db.collection('deliveries').onSnapshot(snap=>{
+    allDeliveries=[];
+    snap.forEach(doc=>{const d=doc.data();d.id=doc.id;allDeliveries.push(d);});
+    allDeliveries.sort((a,b)=>(a.pickupOrder||999)-(b.pickupOrder||999));
+    updateStats(); renderDeliveries(); renderDelayed(); renderAgentLoad(); renderRecentActivity();
+  },e=>toast('Listener error: '+e.message,'err'));
+}
+
+function updateStats(){
+  const td=allDeliveries.filter(d=>d.deliveryDate===today);
+  const t=td.length,p=td.filter(d=>d.status==='Pending').length,k=td.filter(d=>d.status==='Picked'||d.status==='Delivered').length,dl=td.filter(d=>d.status==='Delayed').length,nb=td.filter(d=>d.status==='NoBox').length;
+  ['ov','dl'].forEach(px=>{
+    const _t=document.getElementById(px+'_total'),_p=document.getElementById(px+'_pending'),_k=document.getElementById(px+'_done'),_dl=document.getElementById(px+'_delayed');
+    if(_t)_t.textContent=t;if(_p)_p.textContent=p;if(_k)_k.textContent=k;if(_dl)_dl.textContent=dl;
+  });
+  const _nbt=document.getElementById('ov_noboxtoday');if(_nbt)_nbt.textContent=nb;
+  const _dlnb=document.getElementById('dl_nobox');if(_dlnb)_dlnb.textContent=nb;
+  const pct=t>0?Math.round((k*100)/t):0;
+  document.getElementById('progressBar').style.width=pct+'%';
+  document.getElementById('progressPct').textContent=pct+'%';
+  const rs_t=document.getElementById('rs_total'),rs_r=document.getElementById('rs_rate');
+  if(rs_t)rs_t.textContent=t;if(rs_r)rs_r.textContent=pct+'%';
+  const badge=document.getElementById('delayedBadge');
+  if(dl>0){badge.style.display='';badge.textContent=dl;document.getElementById('delayedInfo').textContent=dl+' delayed';document.getElementById('ov_delayedSub').textContent='Needs attention';}
+  else{badge.style.display='none';document.getElementById('delayedInfo').textContent='All clear';document.getElementById('ov_delayedSub').textContent='All clear';}
+}
+
+function renderDeliveries(){
+  const q=(document.getElementById('searchQ')?.value||'').toLowerCase();
+  const agF=document.getElementById('agentFilter')?.value||'';
+  const rows=allDeliveries.filter(d=>{
+    const ms=!q||(d.customerName||'').toLowerCase().includes(q)||(d.customerPhone||'').includes(q)||(d.boxId||'').toLowerCase().includes(q);
+    const mf=curFilter==='ALL'||(curFilter==='DONE'?(d.status==='Picked'||d.status==='Delivered'):d.status===curFilter);
+    const ma=!agF||d.assignedTo===agF;
+    const md=q?true:(d.deliveryDate===today);
+    return ms&&mf&&ma&&md;
+  });
+  if(!rows.length){document.getElementById('deliveryBody').innerHTML='<tr><td colspan="9" class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">No deliveries found.</div></td></tr>';return;}
+  document.getElementById('deliveryBody').innerHTML=rows.map((d,i)=>{
+    const ag=agents[d.assignedTo]?.name||'— Unassigned —';
+    const cls={Pending:'badge-pending',Picked:'badge-picked',Delayed:'badge-delayed',Delivered:'badge-delivered'}[d.status]||'badge-pending';
+    const isDel=d.status==='Delayed',isUna=!d.assignedTo;
+    const opts=Object.entries(agents).filter(([uid])=>uid!==d.assignedTo).map(([uid,a])=>`<option value="${uid}">${a.name}</option>`).join('');
+    let act='<span style="color:var(--muted)">—</span>';
+    if(isDel||isUna)act=`<div class="rea-wrap"><select class="rea-sel" id="rs_${d.id}"><option value="">${isUna?'Pick agent':'Pick agent'}</option>${opts}</select><button class="rea-btn" onclick="doReassign_d('${d.id}','${escQ(d.customerName)}')">${isUna?'Assign':'Reassign'}</button></div>`;
+    let orderCell;
+    if(agF && d.assignedTo===agF){
+      orderCell=`<input type="number" min="1" value="${d.pickupOrder||i+1}" id="ord_${d.id}" style="width:52px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-family:var(--mono);font-size:12px;background:var(--bg);color:var(--text)">`;
+    }else{
+      orderCell='#'+(d.pickupOrder||'—');
+    }
+    const boxCell=`<span style="background:var(--accentbg);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--accent);font-family:var(--mono)">${d.boxId||'—'}</span>`;
+    // wasDelayed is written once by the app when the agent taps "Delayed" and is
+    // never cleared, so this small tag keeps showing even after status moves to
+    // Picked/Delivered — tells you the customer's box was ready late that day.
+    const delayedTag=(d.wasDelayed && d.status!=='Delayed')?'<span class="badge badge-delayed" style="margin-left:5px" title="This delivery was marked Delayed earlier today">⚠ Was Delayed</span>':'';
+    return `<tr class="${isDel?'row-delayed':''}"><td style="color:var(--muted);font-family:var(--mono);font-size:11px">${i+1}</td><td>${boxCell}</td><td><strong>${d.customerName||'—'}</strong></td><td style="color:var(--muted);font-size:12px">${d.pickupLocation||'—'}</td><td style="color:var(--muted);font-size:12px">${d.deliveryAddress||'—'}</td><td style="${isUna?'color:var(--red)':''}">${ag}</td><td style="font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap">${orderCell}</td><td><span class="badge ${cls}">${d.status||'?'}</span>${delayedTag}</td><td>${act}</td></tr>`;
+  }).join('');
+}
+
+function renderDelayed(){
+  const dl=allDeliveries.filter(d=>d.status==='Delayed'&&d.deliveryDate===today);
+  if(!dl.length){document.getElementById('delayedBody').innerHTML='<tr><td colspan="7" class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">No delayed deliveries!</div></td></tr>';return;}
+  document.getElementById('delayedBody').innerHTML=dl.map((d,i)=>{
+    const ag=agents[d.assignedTo]?.name||'— Unknown —';
+    const opts=Object.entries(agents).filter(([uid])=>uid!==d.assignedTo).map(([uid,a])=>`<option value="${uid}">${a.name}</option>`).join('');
+    const boxCell=`<span style="background:var(--accentbg);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--accent);font-family:var(--mono)">${d.boxId||'—'}</span>`;
+    return `<tr class="row-delayed"><td style="color:var(--red);font-weight:700">${i+1}</td><td>${boxCell}</td><td><strong>${d.customerName||'—'}</strong></td><td style="font-family:var(--mono);font-size:12px;color:var(--blue)">${d.customerPhone||'—'}</td><td>${ag}</td><td style="font-size:12px;color:var(--muted)">${d.pickupLocation||'—'}</td><td><div class="rea-wrap"><select class="rea-sel" id="drs_${d.id}"><option value="">Pick agent</option>${opts}</select><button class="rea-btn" onclick="doReassign_dl('${d.id}','${escQ(d.customerName)}')">Reassign</button></div></td></tr>`;
+  }).join('');
+}
+
+function renderAgentLoad(){
+  const map={};
+  allDeliveries.filter(d=>d.deliveryDate===today).forEach(d=>{
+    if(!map[d.assignedTo])map[d.assignedTo]={p:0,k:0,dl:0};
+    if(d.status==='Pending')map[d.assignedTo].p++;
+    else if(d.status==='Picked'||d.status==='Delivered')map[d.assignedTo].k++;
+    else if(d.status==='Delayed')map[d.assignedTo].dl++;
+  });
+  const grid=document.getElementById('agentLoadGrid');
+  if(!grid)return;
+  const entries=Object.entries(map);
+  if(!entries.length){grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="empty-text">No deliveries today yet</div></div>';return;}
+  grid.innerHTML=entries.map(([uid,c])=>{
+    const nm=agents[uid]?.name||'Unknown';
+    const ini=nm.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    return `<div class="agent-mini-card" onclick="openAgentDeliveries('${uid}')" title="View ${escQ(nm)}'s deliveries">
+      <div class="agent-mini-av">${ini}</div>
+      <div class="agent-mini-name">${nm}</div>
+      <div class="agent-mini-stats">
+        <span class="p">${c.p}P</span><span class="k">${c.k}D</span>${c.dl>0?`<span class="dl">${c.dl}L</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Clicking an agent's mini box jumps to the Deliveries panel, shows ALL their
+// deliveries (any status) by pre-selecting the existing Agent filter dropdown.
+function openAgentDeliveries(uid){
+  goToFiltered('ALL');
+  const agF=document.getElementById('agentFilter');
+  if(agF) agF.value=uid;
+  renderDeliveries();
+}
+
+function renderRecentActivity(){
+  const sorted=[...allDeliveries].filter(d=>d.deliveryDate===today).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).slice(0,5);
+  const icons={Pending:'🕐',Picked:'✅',Delayed:'⚠️',Delivered:'📦'};
+  const colors={Pending:'var(--amber)',Picked:'var(--green)',Delayed:'var(--red)',Delivered:'var(--blue)'};
+  document.getElementById('recentActivity').innerHTML=sorted.length
+    ?sorted.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border)"><span style="font-size:14px">${icons[d.status]||'📋'}</span><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.customerName||'—'}</div><div style="font-size:11px;color:var(--muted)">${agents[d.assignedTo]?.name||'Unassigned'}</div></div><span style="font-size:11px;font-weight:600;color:${colors[d.status]||'var(--muted)'}">${d.status}</span></div>`).join('')
+    :'<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No updates today yet</div></div>';
+}
+
+// ── UNIFIED DELIVERY FILTER ──
+// Used by: Deliveries-panel stat cards, Deliveries-panel filter buttons, and
+// the Dashboard stat cards (via goToFiltered, which navigates here first).
+// Keeps stat-card highlighting and filter-button highlighting in sync no
+// matter which one was clicked. 'DONE' is a virtual filter (Picked +
+// Delivered combined) with no single matching filter button, so in that case
+// the filter buttons are left unselected while the "Completed" stat card lights up.
+function applyDeliveryFilter(status){
+  curFilter = status;
+  document.querySelectorAll('#panel-deliveries .f-btn[data-status]').forEach(b=>{
+    b.classList.remove('on'); b.classList.add('off');
+    if(b.dataset.status === status){ b.classList.remove('off'); b.classList.add('on'); }
+  });
+  document.querySelectorAll('#panel-deliveries .stat-card.clickable').forEach(c=>c.classList.remove('active-stat'));
+  const activeCard = document.getElementById('dlcard_'+status);
+  if(activeCard) activeCard.classList.add('active-stat');
+  renderDeliveries();
+}
+
+// Jump to the Deliveries panel pre-filtered — used by the clickable Dashboard
+// (Overview) stat cards, so clicking "Pending" on the Dashboard takes you to
+// the full Deliveries list already filtered to Pending, same as before.
+function goToFiltered(status){
+  nav('deliveries', document.getElementById('navItemDeliveries'));
+  applyDeliveryFilter(status);
+  document.getElementById('panel-deliveries').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── REASSIGN ──
+function doReassign_d(id,nm){const s=document.getElementById('rs_'+id);if(!s||!s.value){toast('Select an agent first','err');return;}_doReassign(id,s.value,nm);}
+function doReassign_dl(id,nm){const s=document.getElementById('drs_'+id);if(!s||!s.value){toast('Select an agent first','err');return;}_doReassign(id,s.value,nm);}
+function _doReassign(id,uid,nm){
+  const ag=agents[uid];
+  db.collection('deliveries').doc(id).update({assignedTo:uid,assignedName:ag?.name||'',status:'Pending'})
+    .then(()=>toast('Reassigned to '+(ag?.name||'agent'),'ok'))
+    .catch(e=>toast('Reassign failed: '+e.message,'err'));
+}
+
+// ── ROUTE ORDER (fix house/drop order for an agent, from the dashboard) ──
+// Scales to large routes: admin only types a new position number next to the
+// stop(s) that need to move, then clicks "Save Route Order" once. Any row left
+// blank keeps its current position (tie-broken by its current order), so editing
+// one customer's number does not require touching the other 299.
+function getAgentRoute(agentUid){
+  return allDeliveries.filter(d=>d.assignedTo===agentUid && d.deliveryDate===today)
+    .sort((a,b)=>(a.pickupOrder||9999)-(b.pickupOrder||9999));
+}
+async function saveRouteOrder(){
+  const agF=document.getElementById('agentFilter')?.value||'';
+  if(!agF){toast('Select an agent first to edit their route order','err');return;}
+  const route=getAgentRoute(agF);
+  if(!route.length){toast('No deliveries for this agent today','err');return;}
+  const entries=route.map((d,i)=>{
+    const inp=document.getElementById('ord_'+d.id);
+    const val=(inp && inp.value!=='') ? parseFloat(inp.value) : (d.pickupOrder||i+1);
+    return {id:d.id, val, origIndex:i, customerId:d.customerId||null};
+  });
+  entries.sort((a,b)=> a.val-b.val || a.origIndex-b.origIndex);
+  try{
+    let batch=db.batch(), ops=0;
+    for(let i=0;i<entries.length;i++){
+      batch.update(db.collection('deliveries').doc(entries[i].id), {pickupOrder:i+1});
+      ops++;
+      // NEW: also save this order onto the customer's permanent record
+      // so tomorrow's Auto Assign reuses the same order automatically.
+      if(entries[i].customerId){
+        batch.set(db.collection('customers').doc(entries[i].customerId), {routeOrder:i+1}, {merge:true});
+        ops++;
+      }
+      if(ops>=480){await batch.commit();batch=db.batch();ops=0;}
+    }
+    if(ops>0) await batch.commit();
+    toast('Route order saved — will repeat tomorrow too','ok');
+  }catch(e){toast('Save failed: '+e.message,'err');}
+}
+
+// ── CUSTOMERS ──
+function loadCustomers(){
+  db.collection('customers').get().then(snap=>{
+    allCustomers=[];
+    snap.forEach(doc=>{const d=doc.data();d.id=doc.id;if(d.active!==false)allCustomers.push(d);});
+    renderCustomers();
+    const acc=document.getElementById('activeCustomerCount');if(acc)acc.textContent=allCustomers.length+' customer'+(allCustomers.length!==1?'s':'');
+  }).catch(e=>toast('Customers error: '+e.message,'err'));
+}
+function renderCustomers(){
+  const q=(document.getElementById('custSearch')?.value||'').toLowerCase();
+  const agF=document.getElementById('custAgentFilter')?.value||'';
+  const sortBy=document.getElementById('custSort')?.value||'boxid';
+  const rows=allCustomers.filter(c=>{
+    const matchesSearch=!q
+      ||(c.name||'').toLowerCase().includes(q)
+      ||(c.phone||'').includes(q)
+      ||(c.boxId||'').toLowerCase().includes(q)
+      ||(c.zone||'').toLowerCase().includes(q);
+    const matchesAgent=!agF||c.assignedAgent===agF;
+    return matchesSearch&&matchesAgent;
+  });
+  // Natural sort (so LB-2 sorts before LB-10, not after) — keeps the list in a
+  // predictable order instead of whatever order Firestore happened to return.
+  const collator = new Intl.Collator(undefined,{numeric:true,sensitivity:'base'});
+  const sortKey = sortBy==='name' ? 'name' : sortBy==='zone' ? 'zone' : 'boxId';
+  rows.sort((a,b)=> collator.compare(a[sortKey]||'', b[sortKey]||'') || collator.compare(a.name||'', b.name||''));
+
+  document.getElementById('customerBody').innerHTML=rows.length
+    ?rows.map((c,i)=>{const agNm=c.assignedAgent&&agents[c.assignedAgent]?agents[c.assignedAgent].name:'Auto';
+      return `<tr><td style="color:var(--muted)">${i+1}</td><td><span style="background:var(--accentbg);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--accent);font-family:var(--mono)">${c.boxId||'—'}</span></td><td><strong>${c.name||'—'}</strong></td><td style="font-family:var(--mono);font-size:12px;color:var(--blue)">${c.phone||'—'}</td><td style="font-size:12px;color:var(--muted)">${c.pickupLocation||'—'}</td><td style="font-size:12px;color:var(--muted)">${c.deliveryAddress||'—'}</td><td><span style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:10px">${c.zone||'—'}</span></td><td style="font-size:12px">${agNm}</td><td><span class="badge badge-picked">Active</span></td><td><button class="f-btn off" onclick="openEditCustomer('${c.id}')" style="font-size:10px;color:var(--blue)">Edit</button> <button class="f-btn off" onclick="pauseCustomer('${c.id}')" style="font-size:10px">Pause</button> <button class="f-btn off" onclick="deleteCustomer('${c.id}','${escQ(c.name)}')" style="font-size:10px;color:var(--red)">Delete</button></td></tr>`;
+    }).join('')
+    :'<tr><td colspan="9" class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No customers.</div></td></tr>';
+}
+function pauseCustomer(id){db.collection('customers').doc(id).update({active:false}).then(()=>{loadCustomers();toast('Customer paused','ok');}).catch(e=>toast(e.message,'err'));}
+// Deletes ONLY the customer master record. Never touches `deliveries` or `history` —
+// those are separate collections holding their own copy of the data, so past
+// delivery records and archived history stay intact and are never deleted.
+function deleteCustomer(id,name){
+  if(!confirm(`Delete ${name||'this customer'} from the Customer Master List?\n\nThis only removes them from future Auto Assign. Their past deliveries and history stay archived and are never deleted.`))return;
+  db.collection('customers').doc(id).delete()
+    .then(()=>{loadCustomers();toast('Customer deleted — delivery history is safe','ok');})
+    .catch(e=>toast('Delete failed: '+e.message,'err'));
+}
+
+// ══════════════════════════════════
+// INBOX
+// ══════════════════════════════════
+let allConvos=[];
+function listenInbox(){
+  db.collection('messages').orderBy('timestamp','desc').onSnapshot(snap=>{
+    // Group by customerId
+    const groups={};
+    snap.forEach(doc=>{
+      const m=doc.data();m.id=doc.id;
+      if(!groups[m.customerId])groups[m.customerId]={customerId:m.customerId,customerName:m.customerName,customerPhone:m.customerPhone,messages:[],unread:0};
+      groups[m.customerId].messages.push(m);
+      if(!m.read&&m.from==='customer')groups[m.customerId].unread++;
+    });
+    allConvos=Object.values(groups);
+    const total=allConvos.reduce((s,c)=>s+c.unread,0);
+    const badge=document.getElementById('inboxBadge');
+    badge.style.display=total>0?'':'none';
+    badge.textContent=total;
+    const ov=document.getElementById('ov_msgs');if(ov)ov.textContent=total;
+    if(document.getElementById('panel-inbox').classList.contains('active'))renderInboxList();
+  },()=>{});
+}
+
+function loadInboxPanel(){renderInboxList();}
+function filterInbox(){renderInboxList();}
+
+function renderInboxList(){
+  const q=(document.getElementById('inboxSearch')?.value||'').toLowerCase();
+  const filtered=allConvos.filter(c=>!q||(c.customerName||'').toLowerCase().includes(q)||(c.customerPhone||'').includes(q));
+  if(!filtered.length){document.getElementById('inboxList').innerHTML='<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-text">No messages yet</div></div>';return;}
+  document.getElementById('inboxList').innerHTML=filtered.map(c=>{
+    const last=c.messages[0]||{};
+    const t=last.timestamp?new Date(last.timestamp).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'';
+    const initials=(c.customerName||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    return `<div class="inbox-item ${c.unread?'unread':''} ${activeConvoId===c.customerId?'active':''}" onclick="openConvo('${c.customerId}')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="inbox-name">${c.customerName||c.customerPhone||'Unknown'}</div>
+            <div class="inbox-time">${t}</div>
+          </div>
+          <div class="inbox-preview">${last.text||''}</div>
+        </div>
+        ${c.unread?'<div class="inbox-dot"></div>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openConvo(customerId){
+  activeConvoId=customerId;
+  renderInboxList();
+  const convo=allConvos.find(c=>c.customerId===customerId);
+  if(!convo)return;
+  const initials=(convo.customerName||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  document.getElementById('chatArea').innerHTML=`
+    <div class="chat-header">
+      <div class="chat-av">${initials}</div>
+      <div>
+        <div style="font-size:14px;font-weight:600">${convo.customerName||'Customer'}</div>
+        <div style="font-size:11px;color:var(--muted)">${convo.customerPhone||''}</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="topbar-btn secondary" style="font-size:11px" onclick="callCustomer('${convo.customerPhone}')">📞 Call</button>
+      </div>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      ${[...convo.messages].reverse().map(m=>{
+        const t=m.timestamp?new Date(m.timestamp).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'';
+        const isAdmin=m.from==='admin';
+        return `<div class="msg-bubble ${isAdmin?'admin':'customer'}">${m.text||''}<span class="msg-time">${t}</span></div>`;
+      }).join('')}
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-inp" id="adminReplyInp" placeholder="Reply to ${convo.customerName||'customer'}..." onkeydown="if(event.key==='Enter')sendAdminReply('${customerId}','${escQ(convo.customerName)}','${convo.customerPhone||''}')">
+      <button class="chat-send" onclick="sendAdminReply('${customerId}','${escQ(convo.customerName)}','${convo.customerPhone||''}')">Send</button>
+    </div>`;
+  // Mark as read
+  convo.messages.filter(m=>!m.read&&m.from==='customer').forEach(m=>{
+    db.collection('messages').doc(m.id).update({read:true}).catch(()=>{});
+  });
+  // Scroll to bottom
+  setTimeout(()=>{const cm=document.getElementById('chatMessages');if(cm)cm.scrollTop=cm.scrollHeight;},100);
+}
+
+async function sendAdminReply(customerId, customerName, customerPhone){
+  const inp=document.getElementById('adminReplyInp');
+  const txt=(inp?.value||'').trim();
+  if(!txt)return;
+  inp.value='';
+  try{
+    await db.collection('messages').add({
+      customerId, customerName, customerPhone,
+      text:txt, from:'admin', timestamp:Date.now(), read:true
+    });
+    toast('Reply sent','ok');
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+function callCustomer(phone){
+  if(!phone){toast('No phone number','err');return;}
+  window.open('tel:'+phone);
+}
+
+// ══════════════════════════════════
+// NO BOX REQUESTS
+// ══════════════════════════════════
+function listenNoBox(){
+  db.collection('nobox_requests').orderBy('requestedAt','desc').onSnapshot(snap=>{
+    const all=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const tomorrow2=new Date(Date.now()+86400000).toISOString().split('T')[0];
+    const tomorrowCount=all.filter(r=>r.date===tomorrow2).length;
+    const todayCount=all.filter(r=>r.date===today).length;
+    const badge=document.getElementById('noboxBadge');
+    badge.style.display=tomorrowCount>0?'':'none';
+    badge.textContent=tomorrowCount;
+    const ov=document.getElementById('ov_nobox');if(ov)ov.textContent=tomorrowCount;
+    const nb_t=document.getElementById('nb_tomorrow'),nb_td=document.getElementById('nb_today'),nb_tot=document.getElementById('nb_total');
+    if(nb_t)nb_t.textContent=tomorrowCount;
+    if(nb_td)nb_td.textContent=todayCount;
+    if(nb_tot)nb_tot.textContent=all.length;
+  },()=>{});
+}
+
+function loadNoBoxRequests(){
+  const df=document.getElementById('noboxDateFilter').value;
+  let ref=db.collection('nobox_requests').orderBy('requestedAt','desc');
+  if(df)ref=db.collection('nobox_requests').where('date','==',df);
+  ref.get().then(snap=>{
+    const rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('noboxBody').innerHTML=rows.length
+      ?rows.map((r,i)=>{
+        const t=r.requestedAt?new Date(r.requestedAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
+        const isTomorrow=r.date===tomorrow;
+        return `<tr class="${isTomorrow?'row-nobox':''}"><td style="color:var(--muted)">${i+1}</td><td><strong>${r.customerName||'—'}</strong></td><td style="font-family:var(--mono);font-size:12px;color:var(--blue)">${r.customerPhone||'—'}</td><td style="font-family:var(--mono);font-size:12px">${r.date||'—'}</td><td style="font-size:11px;color:var(--muted)">${t}</td><td><span class="badge ${isTomorrow?'badge-nobox':'badge-pending'}">${isTomorrow?'Tomorrow':r.date===today?'Today':'Past'}</span></td></tr>`;
+      }).join('')
+      :'<tr><td colspan="6" class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">No no-box requests</div></td></tr>';
+  }).catch(()=>{});
+}
+
+// ── Admin notifications listener ──
+function listenAdminNotifications(){
+  db.collection('admin_notifications').where('read','==',false)
+    .onSnapshot(snap=>{
+      if(!snap.empty){
+        snap.forEach(doc=>{
+          const n=doc.data();
+          if(n.type==='message') toast('💬 '+n.message?.substring(0,60),'info');
+          if(n.type==='nobox')   toast('📦 '+n.message?.substring(0,60),'info');
+          db.collection('admin_notifications').doc(doc.id).update({read:true}).catch(()=>{});
+        });
+      }
+    },()=>{});
+}
+
+// ══════════════════════════════════
+// BROADCAST
+// ══════════════════════════════════
+let twilioConfig={endpoint:'',token:'',templateName:''};
+
+function loadTwilioConfig(){
+  const saved=localStorage.getItem('lunchbox_wati');
+  if(saved){
+    twilioConfig=JSON.parse(saved);
+    if(twilioConfig.endpoint){
+      document.getElementById('watiEndpoint').value=twilioConfig.endpoint||'';
+      document.getElementById('watiToken').value=twilioConfig.token||'';
+      document.getElementById('watiTemplateName').value=twilioConfig.templateName||'';
+      document.getElementById('twilioWarning').style.display='none';
+    }
+  }
+}
+
+function saveTwilioConfig(){
+  twilioConfig={
+    endpoint:     document.getElementById('watiEndpoint').value.trim().replace(/\/$/,''),
+    token:        document.getElementById('watiToken').value.trim(),
+    templateName: document.getElementById('watiTemplateName').value.trim()
+  };
+  localStorage.setItem('lunchbox_wati',JSON.stringify(twilioConfig));
+  document.getElementById('twilioWarning').style.display='none';
+  toast('WATI credentials saved!','ok');
+}
+
+// WATI only supports WhatsApp — no channel selector needed anymore (broadcastChannel already declared above as 'whatsapp')
+
+function selectRecipients(type,btn){
+  broadcastRecipient=type;
+  document.querySelectorAll('#panel-broadcast .f-btn').forEach(b=>{b.classList.remove('on');b.classList.add('off');});
+  btn.classList.add('on');btn.classList.remove('off');
+  document.getElementById('zoneSelector').style.display=type==='zone'?'block':'none';
+  const msgs={all:'All customers will receive this message',zone:'Customers in selected zone will receive this',nobox:'Customers who opted out tomorrow will receive this'};
+  document.getElementById('recipientCount').textContent=msgs[type]||'';
+}
+
+const templates={
+  holiday:`Hi {name}! 🏖️ Lunchbox will be closed on [date]. No delivery on that day. We'll resume as usual the next working day. Thank you for your understanding!`,
+  delay:`Hi {name} ⚡ Please note there is a route delay today. Your delivery will arrive a bit later than usual. We apologize for the inconvenience!`,
+  nobox:`📦 Reminder: If you don't need your lunchbox tomorrow (${tomorrow}), please tap "No Box" in the Lunchbox app by 8 PM today to avoid charges.`,
+  menu:`Hi {name}! 🍛 Exciting news — we've updated tomorrow's menu! Check the app for today's special. Enjoy your meal!`,
+  price:`Hi {name}, 💰 Please note that starting from next month there will be a slight price adjustment. We'll send full details soon. Thank you for being a loyal customer!`
+};
+
+function useTemplate(key){
+  document.getElementById('broadcastMsg').value=templates[key]||'';
+  updatePreview();
+}
+function updatePreview(){
+  const msg=document.getElementById('broadcastMsg').value||'';
+  document.getElementById('broadcastCharCount').textContent=msg.length;
+  const preview=msg.replace(/{name}/g,'Priya').replace(/{boxid}/g,'LB-001').replace(/{date}/g,today);
+  document.getElementById('msgPreview').textContent=preview||'Your message preview will appear here...';
+}
+
+function openM_broadcast(){
+  const msg=document.getElementById('broadcastMsg').value.trim();
+  if(!msg){toast('Enter a message first','err');return;}
+  if(!twilioConfig.sid){toast('Save Twilio credentials first','err');return;}
+  document.getElementById('broadcastConfirmDetails').textContent=`Channel: ${broadcastChannel.toUpperCase()} · Recipients: ${broadcastRecipient}`;
+  document.getElementById('broadcastConfirmMsg').textContent=msg.substring(0,100)+(msg.length>100?'...':'');
+  openM('broadcastConfirmModal');
+}
+
+async function executeBroadcast(){
+  closeM('broadcastConfirmModal');
+  const msg=document.getElementById('broadcastMsg').value.trim();
+  if(!msg||!twilioConfig.endpoint||!twilioConfig.token||!twilioConfig.templateName){
+    toast('Setup WATI endpoint, token and template name first','err');return;
+  }
+  let recipients=[];
+  if(broadcastRecipient==='all'){
+    recipients=allCustomers.filter(c=>c.phone).map(c=>({name:c.name,phone:c.phone,boxId:c.boxId}));
+  } else if(broadcastRecipient==='zone'){
+    const zone=document.getElementById('broadcastZone').value;
+    recipients=allCustomers.filter(c=>c.phone&&c.zone&&c.zone.toLowerCase()===zone).map(c=>({name:c.name,phone:c.phone,boxId:c.boxId}));
+  } else if(broadcastRecipient==='nobox'){
+    const snap=await db.collection('nobox_requests').where('date','==',tomorrow).get();
+    snap.forEach(doc=>{
+      const d=doc.data();
+      if(d.customerPhone){
+        const cust=allCustomers.find(c=>c.id===d.customerId);
+        recipients.push({name:d.customerName,phone:d.customerPhone,boxId:cust?.boxId||''});
+      }
+    });
+  }
+  if(!recipients.length){toast('No recipients found','err');return;}
+
+  document.getElementById('sendProgress').style.display='block';
+  let sent=0,failed=0;
+  for(const r of recipients){
+    const phone='91'+r.phone.replace(/\D/g,''); // WATI wants digits only, country code first, no '+'
+    try{
+      const res=await fetch(
+        `${twilioConfig.endpoint}/api/v2/sendTemplateMessage?whatsappNumber=${phone}`,
+        {
+          method:'POST',
+          headers:{
+            'Authorization':`Bearer ${twilioConfig.token}`,
+            'Content-Type':'application/json'
+          },
+          body:JSON.stringify({
+            template_name: twilioConfig.templateName,
+            broadcast_name: `admin_broadcast_${today}`,
+            parameters: [
+              { name:'name',   value: r.name  || 'Customer' },
+              { name:'boxid',  value: r.boxId || '—' }
+            ]
+          })
+        }
+      );
+      if(res.ok)sent++;else failed++;
+    }catch(e){failed++;}
+    const pct=Math.round(((sent+failed)/recipients.length)*100);
+    document.getElementById('sendProgressFill').style.width=pct+'%';
+    document.getElementById('sendStatusText').textContent=`Sending ${sent+failed} of ${recipients.length}...`;
+  }
+
+  await db.collection('broadcast_logs').add({
+    channel:'whatsapp',templateName:twilioConfig.templateName,message:msg,recipientType:broadcastRecipient,
+    totalRecipients:recipients.length,sent,failed,timestamp:Date.now()
+  }).catch(()=>{});
+  setTimeout(()=>document.getElementById('sendProgress').style.display='none',3000);
+  document.getElementById('sendStatusText').textContent=`✅ Done! ${sent} sent, ${failed} failed.`;
+  toast(`Broadcast done: ${sent}/${recipients.length} sent`,'ok');
+  loadBroadcastLog();
+}
+
+async function loadBroadcastLog(){
+  const snap=await db.collection('broadcast_logs').orderBy('timestamp','desc').limit(20).get().catch(()=>null);
+  if(!snap||snap.empty){document.getElementById('broadcastLog').innerHTML='<tr><td colspan="5" class="empty-state"><div class="empty-text">No broadcasts sent yet</div></td></tr>';return;}
+  document.getElementById('broadcastLog').innerHTML=snap.docs.map(doc=>{
+    const d=doc.data();
+    const t=d.timestamp?new Date(d.timestamp).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
+    const ch=d.channel==='whatsapp'?'💬 WhatsApp':'📱 SMS';
+    return `<tr><td style="font-size:12px;color:var(--muted);font-family:var(--mono)">${t}</td><td>${ch}</td><td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${d.message||'—'}</td><td style="font-family:var(--mono);font-size:12px">${d.totalRecipients||0}</td><td><span class="badge badge-picked">${d.sent||0} sent</span> ${d.failed>0?`<span class="badge badge-delayed">${d.failed} failed</span>`:''}</td></tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════
+// ADD DELIVERY / CUSTOMER / AGENT
+// ══════════════════════════════════
+function addDelivery(){
+  const n=gv('dN'),ph=gv('dPh'),pk=gv('dPk'),ad=gv('dAd'),ag=gv('dAg'),no=gv('dNo'),bx=gv('dBx').toUpperCase();
+  const it=parseInt(document.getElementById('dIt').value)||1;
+  if(!n||!pk||!ad){toast('Name, pickup and delivery address required','err');return;}
+  if(!ag){toast('Select an agent','err');return;}
+  const order=allDeliveries.filter(d=>d.assignedTo===ag&&d.deliveryDate===today).length+1;
+  db.collection('deliveries').add({
+    customerName:n,customerPhone:ph,boxId:bx,pickupLocation:pk,deliveryAddress:ad,
+    assignedTo:ag,assignedName:agents[ag]?.name||'',agentPhone:agents[ag]?.phone||'',status:'Pending',
+    itemCount:it,notes:no,pickupOrder:order,deliveryDate:today,timestamp:Date.now()
+  }).then(()=>{closeM('addDeliveryModal');toast('Delivery added!','ok');['dN','dPh','dPk','dAd','dNo','dBx'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});})
+  .catch(e=>toast('Error: '+e.message,'err'));
+}
+// ── BOX ID UNIQUENESS ──
+// Box ID is meant to be a primary key — every customer needs a distinct one.
+// Always checks Firestore directly (not just the in-memory allCustomers list)
+// so it also catches paused/inactive customers still holding that Box ID.
+async function findBoxIdOwner(boxId, excludeId){
+  if(!boxId) return null;
+  const snap = await db.collection('customers').where('boxId','==',boxId).get();
+  for(const doc of snap.docs){
+    if(doc.id !== excludeId) return {id:doc.id, name:doc.data().name||'Unknown', active:doc.data().active!==false};
+  }
+  return null;
+}
+
+// Inline "already allotted" warning shown right under the Box ID field as
+// soon as the admin tabs away from it — same check as the final save guard,
+// just surfaced earlier so it isn't a surprise on submit.
+async function liveCheckBoxId(inputId, excludeId){
+  const input=document.getElementById(inputId);
+  const warnEl=document.getElementById(inputId+'Warn');
+  if(!input || !warnEl) return;
+  const bx=(input.value||'').trim().toUpperCase();
+  if(!bx){warnEl.style.display='none';return;}
+  const owner = await findBoxIdOwner(bx, excludeId);
+  if(owner){
+    warnEl.textContent = `⚠ Already allotted to ${owner.name}${owner.active?'':' (paused)'}`;
+    warnEl.style.display='block';
+  } else {
+    warnEl.style.display='none';
+  }
+}
+
+async function addCustomer(){
+  const n=gv('cN'),ph=gv('cPh'),bx=gv('cBx').toUpperCase(),pk=gv('cPk'),ad=gv('cAd'),zn=gv('cZn'),ag=gv('cAg'),no=gv('cNo');
+  if(!n||!pk||!ad){toast('Name, pickup and delivery address required','err');return;}
+  if(!bx){toast('Box ID is required','err');return;}
+  const owner = await findBoxIdOwner(bx, null);
+  if(owner){toast(`Box ID ${bx} is already allotted to ${owner.name}${owner.active?'':' (paused)'}`,'err');return;}
+  db.collection('customers').add({name:n,phone:ph,boxId:bx,pickupLocation:pk,deliveryAddress:ad,zone:zn,assignedAgent:ag,notes:no,itemCount:1,active:true,createdAt:Date.now()})
+    .then(()=>{closeM('addCustomerModal');loadCustomers();toast('Customer added!','ok');['cN','cPh','cBx','cPk','cAd','cZn','cNo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});})
+    .catch(e=>toast('Error: '+e.message,'err'));
+}
+
+// ── EDIT CUSTOMER ──
+// Lets you fix customers that were added without an agent (or fix any other
+// field). Only updates the customers/{id} master record — does not touch
+// deliveries already generated by a previous Auto Assign run.
+function openEditCustomer(id){
+  const c=allCustomers.find(x=>x.id===id);
+  if(!c){toast('Customer not found','err');return;}
+  document.getElementById('ecId').value=id;
+  document.getElementById('ecN').value=c.name||'';
+  document.getElementById('ecPh').value=c.phone||'';
+  document.getElementById('ecBx').value=c.boxId||'';
+  document.getElementById('ecZn').value=c.zone||'';
+  document.getElementById('ecPk').value=c.pickupLocation||'';
+  document.getElementById('ecAd').value=c.deliveryAddress||'';
+  document.getElementById('ecAg').value=c.assignedAgent||'';
+  document.getElementById('ecNo').value=c.notes||'';
+  openM('editCustomerModal');
+}
+async function saveCustomerEdit(){
+  const id=document.getElementById('ecId').value;
+  const n=gv('ecN'),ph=gv('ecPh'),bx=gv('ecBx').toUpperCase(),pk=gv('ecPk'),ad=gv('ecAd'),zn=gv('ecZn'),ag=gv('ecAg'),no=gv('ecNo');
+  if(!id){toast('Missing customer reference','err');return;}
+  if(!n||!pk||!ad){toast('Name, pickup and delivery address required','err');return;}
+  if(!bx){toast('Box ID is required','err');return;}
+  const owner = await findBoxIdOwner(bx, id);
+  if(owner){toast(`Box ID ${bx} is already allotted to ${owner.name}${owner.active?'':' (paused)'}`,'err');return;}
+  db.collection('customers').doc(id).update({
+    name:n,phone:ph,boxId:bx,pickupLocation:pk,deliveryAddress:ad,zone:zn,assignedAgent:ag,notes:no
+  }).then(()=>{closeM('editCustomerModal');loadCustomers();toast('Customer updated!','ok');})
+    .catch(e=>toast('Update failed: '+e.message,'err'));
+}
+function createAgent(){
+  const n=gv('aN'),ph=gv('aPh'),em=gv('aEm'),pw=gv('aPw'),zn=gv('aZn');
+  const mx=parseInt(document.getElementById('aMx').value)||30;
+  if(!n||!em||!pw){toast('Name, email and password required','err');return;}
+  if(pw.length<6){toast('Password min 6 characters','err');return;}
+  const btn=document.getElementById('createAgentBtn');btn.disabled=true;btn.textContent='Creating...';
+  fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`,
+    {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw,returnSecureToken:true})})
+  .then(r=>r.json()).then(data=>{
+    if(data.error)throw new Error(data.error.message);
+    return db.collection('users').doc(data.localId).set({userId:data.localId,name:n,phone:ph,email:em,role:'delivery',zone:zn,maxDeliveries:mx,fcmToken:'',totalDeliveries:0,completedDeliveries:0,active:true});
+  }).then(()=>{
+    btn.disabled=false;btn.textContent='Create Agent';closeM('addAgentModal');loadAgents();
+    alert(`✅ Agent created!\n\nShare these login details with ${n}:\n\nEmail: ${em}\nPassword: ${pw}\n\nThey use these to login to the Android app.`);
+    toast('Agent '+n+' created!','ok');
+    ['aN','aPh','aEm','aPw','aZn'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  }).catch(e=>{btn.disabled=false;btn.textContent='Create Agent';let msg=e.message;if(msg.includes('EMAIL_EXISTS'))msg='Email already registered.';toast('Failed: '+msg,'err');});
+}
+
+// ── EDIT AGENT ──
+// Only editable here: name, phone, zone, maxDeliveries (all Firestore fields on
+// users/{uid}). Email/password are Firebase Auth fields and can't be changed
+// from the admin dashboard — see the note in the modal.
+function openEditAgent(uid){
+  const a=agents[uid];
+  if(!a){toast('Agent not found','err');return;}
+  document.getElementById('eaUid').value=uid;
+  document.getElementById('eaN').value=a.name||'';
+  document.getElementById('eaPh').value=a.phone||'';
+  document.getElementById('eaZn').value=a.zone||'';
+  document.getElementById('eaMx').value=a.maxDeliveries||30;
+  document.getElementById('eaEm').value=a.email||'';
+  openM('editAgentModal');
+}
+function saveAgentEdit(){
+  const uid=document.getElementById('eaUid').value;
+  const n=gv('eaN'),ph=gv('eaPh'),zn=gv('eaZn');
+  const mx=parseInt(document.getElementById('eaMx').value)||30;
+  if(!uid){toast('Missing agent reference','err');return;}
+  if(!n){toast('Name is required','err');return;}
+  db.collection('users').doc(uid).update({name:n,phone:ph,zone:zn,maxDeliveries:mx})
+    .then(()=>{closeM('editAgentModal');loadAgents();toast('Agent updated!','ok');})
+    .catch(e=>toast('Update failed: '+e.message,'err'));
+}
+
+// ── AUTO ASSIGN ──
+async function previewAssign(){
+  if(!Object.keys(agents).length){toast('No agents found','err');return;}
+  try{
+    const snap=await db.collection('customers').get();
+    const customers=[];snap.forEach(doc=>{const d=doc.data();if(d.active!==false)customers.push({id:doc.id,...d});});
+    if(!customers.length){toast('No customers found','err');return;}
+    const agList=Object.entries(agents).map(([uid,d])=>({uid,name:d.name,zone:d.zone||'',maxDeliveries:d.maxDeliveries||999}));
+    const result=_assignCustomers(customers,agList);
+    document.getElementById('assignPreview').innerHTML=Object.entries(result).map(([uid,custs])=>`<div class="assign-agent-card"><div class="assign-agent-name">${agents[uid]?.name||uid}</div><div class="assign-count" style="color:var(--green);font-weight:600">${custs.length} deliveries</div><div style="margin-top:6px;font-size:11px;color:var(--muted)">${custs.slice(0,4).map(c=>c.name).join(', ')}${custs.length>4?` +${custs.length-4} more`:''}</div></div>`).join('');
+    toast('Preview ready','info');
+  }catch(e){toast('Preview failed: '+e.message,'err');}
+}
+async function runAssign(auto){
+  auto = !!auto;
+  if(!Object.keys(agents).length){ if(!auto) toast('No agents found','err'); return; }
+  if(!auto && !confirm('Assign today\'s deliveries to all agents?'))return;
+  const btn=document.querySelector('#panel-assign .topbar-btn.green-btn');
+  if(btn){btn.disabled=true;btn.textContent='Working...';}
+  const progEl=document.getElementById('assignProgress');
+  const barEl=document.getElementById('assignBar');
+  const statusEl=document.getElementById('assignStatus');
+  if(progEl)progEl.style.display='block';
+  if(barEl)barEl.style.width='5%';
+  if(statusEl)statusEl.textContent='Reading customers...';
+  try{
+    const snap=await db.collection('customers').get();
+    const customers=[];snap.forEach(doc=>{const d=doc.data();if(d.active!==false)customers.push({id:doc.id,...d});});
+    if(!customers.length){
+      if(!auto) toast('No customers found','err');
+      if(progEl)progEl.style.display='none';
+      if(btn){btn.disabled=false;btn.textContent='🚀 Assign Today\'s Routes';}
+      return;
+    }
+    const existing=await db.collection('deliveries').where('deliveryDate','==',today).limit(1).get();
+    if(!existing.empty){
+      if(auto){
+        // Already assigned for today — nothing to redo, just mark done so we don't check again this hour.
+        await db.collection('config').doc('app').set({lastAutoAssign:today},{merge:true}).catch(()=>{});
+        if(progEl)progEl.style.display='none';
+        if(btn){btn.disabled=false;btn.textContent='🚀 Assign Today\'s Routes';}
+        return;
+      }
+      const ok=confirm(`Deliveries for today already exist.\n\nDelete and reassign fresh?`);
+      if(!ok){if(progEl)progEl.style.display='none';if(btn){btn.disabled=false;btn.textContent='🚀 Assign Today\'s Routes';}return;}
+      const allToday=await db.collection('deliveries').where('deliveryDate','==',today).get();
+      const delBatch=db.batch();allToday.forEach(d=>delBatch.delete(d.ref));await delBatch.commit();
+    }
+    if(barEl)barEl.style.width='25%';
+    const agList=Object.entries(agents).map(([uid,d])=>({uid,name:d.name,zone:d.zone||'',maxDeliveries:d.maxDeliveries||999}));
+    const result=_assignCustomers(customers,agList);
+    let batch=db.batch(),ops=0,done=0,total=customers.length;
+    for(const[uid,custs]of Object.entries(result)){
+      for(let i=0;i<custs.length;i++){
+        const c=custs[i];
+        batch.set(db.collection('deliveries').doc(),{
+          customerName:c.name||'',customerPhone:c.phone||'',pickupLocation:c.pickupLocation||'',
+          deliveryAddress:c.deliveryAddress||'',notes:c.notes||'',itemCount:c.itemCount||1,
+          customerId:c.id,boxId:c.boxId||'',assignedTo:uid,assignedName:agents[uid]?.name||'',
+          agentPhone:   agents[uid]?.phone || '', 
+          status:'Pending',pickupOrder:i+1,deliveryDate:today,timestamp:Date.now()+done
+        });
+        ops++;done++;
+        if(ops>=490){await batch.commit();batch=db.batch();ops=0;}
+        if(barEl)barEl.style.width=Math.round(25+(done/total)*70)+'%';
+        if(statusEl)statusEl.textContent='Writing '+done+' of '+total+'...';
+      }
+    }
+    if(ops>0)await batch.commit();
+    await db.collection('config').doc('app').set({lastAutoAssign:today},{merge:true}).catch(()=>{});
+    if(barEl)barEl.style.width='100%';
+    if(statusEl)statusEl.textContent='✅ Done! '+total+' deliveries created.';
+    toast((auto?'Auto Assign: ':'')+total+' deliveries assigned to '+agList.length+' agents!','ok');
+    setTimeout(()=>{if(progEl)progEl.style.display='none';},3000);
+  }catch(e){
+    if(progEl)progEl.style.display='none';
+    toast('Error: '+e.message,'err');
+  }
+  if(btn){btn.disabled=false;btn.textContent='🚀 Assign Today\'s Routes';}
+}
+function _assignCustomers(customers,agentList){
+  const result={};agentList.forEach(a=>{result[a.uid]=[];});
+  const unassigned=[];
+  for(const c of customers){if(c.assignedAgent&&result[c.assignedAgent]!==undefined)result[c.assignedAgent].push(c);else unassigned.push(c);}
+  const noZone=[];
+  for(const c of unassigned){const cz=(c.zone||'').toLowerCase();const match=agentList.find(a=>a.zone&&cz&&cz.includes(a.zone.toLowerCase())&&result[a.uid].length<a.maxDeliveries);if(match)result[match.uid].push(c);else noZone.push(c);}
+  for(const c of noZone){let least=agentList[0];for(const a of agentList)if(result[a.uid].length<result[least.uid].length)least=a;result[least.uid].push(c);}
+  for(const uid in result)result[uid].sort((a,b)=>{
+  const ra = (a.routeOrder!=null) ? a.routeOrder : 999999;
+  const rb = (b.routeOrder!=null) ? b.routeOrder : 999999;
+  if(ra!==rb) return ra-rb;
+  return (a.pickupLocation||'').localeCompare(b.pickupLocation||'');
+});
+  return result;
+}
+
+// ── EXCEL IMPORT ──
+function dragOver(e){e.preventDefault();document.getElementById('dropZone').classList.add('drag');}
+function dragLeave(){document.getElementById('dropZone').classList.remove('drag');}
+function dropFile(e){e.preventDefault();dragLeave();const f=e.dataTransfer.files[0];if(f)readFile(f);}
+function readFile(file){
+  const reader=new FileReader();
+  reader.onload=evt=>{
+    try{
+      const wb=XLSX.read(evt.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      parsedData=rows.filter(r=>r.CustomerName||r.customerName||r['Customer Name']);
+      if(!parsedData.length){toast('No valid rows found','err');return;}
+      showImportPreview(parsedData);
+    }catch(e){toast('Could not read file: '+e.message,'err');}
+  };
+  reader.readAsBinaryString(file);
+}
+function showImportPreview(rows){
+  document.getElementById('importCount').textContent='✅ '+rows.length+' customers found';
+  document.getElementById('previewBody').innerHTML=rows.slice(0,15).map((r,i)=>{
+    const nm=r.CustomerName||r.customerName||r['Customer Name']||'';
+    const ph=(r.Phone||r.phone||'').toString();
+    const bx=(r.BoxID||r.boxId||r['Box ID']||r.boxid||'').toString().toUpperCase();
+    const pk=r.PickupLocation||r.pickupLocation||r['Pickup Location']||'';
+    const zn=r.Zone||r.zone||'';
+    return `<tr><td style="padding:6px 12px;color:var(--muted)">${i+1}</td><td style="padding:6px 12px"><strong>${nm}</strong></td><td style="padding:6px 12px;font-family:var(--mono);font-size:11px">${ph}</td><td style="padding:6px 12px"><span style="background:var(--accentbg);color:var(--accent);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;font-family:var(--mono)">${bx||'—'}</span></td><td style="padding:6px 12px;font-size:11px;color:var(--muted)">${pk}</td><td style="padding:6px 12px"><span style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px">${zn||'—'}</span></td></tr>`;
+  }).join('')+(rows.length>15?`<tr><td colspan="5" style="padding:8px 12px;color:var(--muted);text-align:center;font-size:11px">...and ${rows.length-15} more rows</td></tr>`:'');
+  document.getElementById('importPreviewSection').style.display='block';
+  toast('Parsed '+rows.length+' rows — review then import','info');
+}
+async function importCustomers(){
+  if(!parsedData.length){toast('Nothing to import','err');return;}
+  const ov=document.getElementById('overrideAgent').value;
+  document.getElementById('importProgressWrap').style.display='block';
+  document.getElementById('importStatusText').textContent='Checking for duplicate Box IDs...';
+
+  // Box ID is a primary key — build a set of every boxId already in use
+  // (any customer, active or paused) plus a set to catch duplicates within
+  // this same file, so re-importing the same sheet twice can't create clones.
+  const existingSnap = await db.collection('customers').get();
+  const usedBoxIds = new Set();
+  existingSnap.forEach(doc=>{ const b=(doc.data().boxId||'').toUpperCase(); if(b) usedBoxIds.add(b); });
+
+  const toImport=[], skipped=[];
+  parsedData.forEach(r=>{
+    const bx=(r.BoxID||r.boxId||r['Box ID']||r.boxid||'').toString().toUpperCase();
+    const nm=r.CustomerName||r.customerName||r['Customer Name']||'';
+    if(bx && usedBoxIds.has(bx)){
+      skipped.push(`${nm||'(no name)'} — ${bx}`);
+    } else {
+      if(bx) usedBoxIds.add(bx); // reserve it so a later duplicate row in the same file is also caught
+      toImport.push(r);
+    }
+  });
+
+  if(!toImport.length){
+    toast('All rows were skipped — every Box ID is already in use','err');
+    document.getElementById('importProgressWrap').style.display='none';
+    return;
+  }
+
+  let done=0,total=toImport.length;
+  for(let s=0;s<toImport.length;s+=400){
+    const chunk=toImport.slice(s,s+400);
+    const batch=db.batch();
+    chunk.forEach(r=>{
+      const nm=r.CustomerName||r.customerName||r['Customer Name']||'';
+      const ph=(r.Phone||r.phone||'').toString();
+      const bx=(r.BoxID||r.boxId||r['Box ID']||r.boxid||'').toString().toUpperCase();
+      batch.set(db.collection('customers').doc(),{
+        name:nm,phone:ph,boxId:bx,
+        pickupLocation:r.PickupLocation||r.pickupLocation||r['Pickup Location']||'',
+        deliveryAddress:r.DeliveryAddress||r.deliveryAddress||r['Delivery Address']||'',
+        zone:r.Zone||r.zone||'',assignedAgent:ov||(r.AgentUID||r.agentUID||''),
+        notes:r.Notes||r.notes||'',itemCount:parseInt(r.ItemCount||r.itemCount||1)||1,
+        active:true,createdAt:Date.now()
+      });
+    });
+    await batch.commit();
+    done+=chunk.length;
+    document.getElementById('importProgressFill').style.width=Math.round((done/total)*100)+'%';
+    document.getElementById('importStatusText').textContent='Imported '+done+' of '+total+'...';
+  }
+  const skipMsg = skipped.length ? ` — skipped ${skipped.length} duplicate Box ID${skipped.length===1?'':'s'} (${skipped.slice(0,5).join(', ')}${skipped.length>5?', …':''})` : '';
+  document.getElementById('importStatusText').textContent='✅ '+total+' customers imported!'+skipMsg;
+  toast(total+' imported'+(skipped.length?`, ${skipped.length} skipped as duplicate Box IDs`:'!'),'ok');
+  parsedData=[];loadCustomers();
+  setTimeout(()=>{document.getElementById('importPreviewSection').style.display='none';document.getElementById('importProgressWrap').style.display='none';document.getElementById('fileInput').value='';},skipped.length?6000:3000);
+}
+function downloadTemplate(){
+  const ws=XLSX.utils.aoa_to_sheet([['CustomerName','Phone','BoxID','PickupLocation','DeliveryAddress','Zone','AgentUID','Notes','ItemCount'],['Priya Sharma','9876543210','LB-001','MG Road','House 12 Gandhi Nagar','north','','2nd floor','1'],['Arjun Reddy','9876543211','LB-002','Clock Tower','Flat 3B Nehru Colony','south','','','1']]);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Customers');
+  XLSX.writeFile(wb,'lunchbox_customer_template.xlsx');
+  toast('Template downloaded!','ok');
+}
+
+// ── HISTORY ──
+async function loadHistory(){
+  const dt=document.getElementById('histDate').value;
+  if(!dt){toast('Select a date first','err');return;}
+  document.getElementById('histBody').innerHTML='<tr><td colspan="6" class="empty-state"><div class="empty-text">Loading...</div></td></tr>';
+  document.getElementById('historySummary').style.display='none';
+  const summSnap=await db.doc('history/'+dt+'/summary/stats').get().catch(()=>null);
+  if(summSnap&&summSnap.exists){
+    const s=summSnap.data();
+    document.getElementById('hs_total').textContent=s.totalDeliveries||0;
+    document.getElementById('hs_done').textContent=s.delivered||0;
+    document.getElementById('hs_delayed').textContent=s.delayed||0;
+    document.getElementById('hs_rate').textContent=(s.completionRate||0)+'%';
+    document.getElementById('historySummary').style.display='grid';
+  }
+  let snap=await db.collection('history/'+dt+'/deliveries').orderBy('pickupOrder','asc').get().catch(()=>db.collection('history/'+dt+'/deliveries').get());
+  if(!snap||snap.empty){document.getElementById('histBody').innerHTML=`<tr><td colspan="6" class="empty-state"><div class="empty-icon">🗂</div><div class="empty-text">No deliveries archived for ${dt}</div></td></tr>`;return;}
+  const sc={Delivered:'badge-delivered',Picked:'badge-picked',Delayed:'badge-delayed',Pending:'badge-pending'};
+  let i=0;
+  document.getElementById('histBody').innerHTML=[...snap.docs].map(doc=>{
+    const d=doc.data();i++;
+    const ag=agents[d.assignedTo]?.name||d.assignedName||'?';
+    // Prefer the actual "marked Picked" time. Falls back to the generic
+    // timestamp field only for older records that predate pickedAt.
+    const pickTime=d.pickedAt||d.timestamp;
+    const t=pickTime?new Date(pickTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—';
+    const delayedTag=(d.wasDelayed && d.status!=='Delayed')?'<span class="badge badge-delayed" style="margin-left:5px" title="This delivery was marked Delayed earlier that day">⚠ Was Delayed</span>':'';
+    return `<tr><td style="color:var(--muted)">${i}</td><td><strong>${d.customerName||'—'}</strong></td><td style="font-family:var(--mono);font-size:12px;color:var(--blue)">${d.customerPhone||'—'}</td><td>${ag}</td><td><span class="badge ${sc[d.status]||'badge-pending'}">${d.status}</span>${delayedTag}</td><td style="color:var(--muted);font-size:12px">${t}</td></tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════
+// ANALYTICS (Customers + Agents + Storage, All-Time or a specific month)
+// ══════════════════════════════════
+function analyticsTab(which,btn){
+  document.querySelectorAll('#panel-analytics .f-btn').forEach(b=>{b.classList.remove('on');b.classList.add('off');});
+  btn.classList.add('on');btn.classList.remove('off');
+  document.getElementById('analyticsCustomersView').style.display=which==='customers'?'block':'none';
+  document.getElementById('analyticsAgentsView').style.display=which==='agents'?'block':'none';
+}
+
+function onAnalyticsScopeChange(){
+  const scope=document.getElementById('analyticsScope').value;
+  const picker=document.getElementById('analyticsMonthPicker');
+  picker.style.display = scope==='month' ? 'inline-block' : 'none';
+  if(scope==='month' && !picker.value) picker.value = today.slice(0,7); // default to current month
+  loadAnalytics();
+}
+
+// ── SHARED HISTORY CACHE ──
+// A plain, unfiltered collectionGroup('deliveries') query needs no composite
+// index (only equality/range filters like archiveDate>=... do, and those
+// require creating an index in the Firebase console first). So instead of
+// querying Firestore separately for "All Time" vs "a specific month" — which
+// is what caused the "COLLECTION_GROUP_ASC index required" error — we fetch
+// the full history once, cache it in memory, and slice it by month in JS.
+// This also lets the Agents panel reuse the same data instead of relying on
+// the unused totalDeliveries/completedDeliveries fields on the user doc.
+let historyCache = null;
+async function loadHistoryCache(force){
+  if(historyCache && !force) return historyCache;
+  const snap = await db.collectionGroup('deliveries').get();
+  historyCache = snap.docs.map(d=>d.data());
+  return historyCache;
+}
+
+// Pulls every customer, every no-box request, and every archived delivery
+// once (cached — see loadHistoryCache above), then aggregates everything
+// client-side. "All Time" uses the full cache; "Specific Month" filters that
+// same cache down to the chosen month, so switching scopes never needs a new
+// Firestore index and only re-fetches when you hit Refresh.
+async function loadAnalytics(forceRefresh){
+  const loadingEl=document.getElementById('analyticsLoading');
+  if(loadingEl) loadingEl.style.display='block';
+  const scope=document.getElementById('analyticsScope')?.value||'all';
+  const monthVal=document.getElementById('analyticsMonthPicker')?.value||today.slice(0,7);
+  const isMonth = scope==='month';
+
+  const scopeLabelEl=document.getElementById('analyticsScopeLabel');
+  const periodLabel = isMonth
+    ? new Date(monthVal+'-02').toLocaleDateString('en-IN',{month:'long',year:'numeric'})
+    : 'All-time';
+  if(scopeLabelEl) scopeLabelEl.textContent = `${periodLabel} performance, built from your daily History archives`;
+  ['an_totalDelayedFlagLbl','an_totalEndedDelayedLbl','an_totalNoboxReqLbl'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const base=id==='an_totalDelayedFlagLbl'?'Delay Flags':id==='an_totalEndedDelayedLbl'?'Ended Delayed':'No Box Requests';
+    el.textContent = `${base} (${isMonth?periodLabel:'All Time'})`;
+  });
+  const agTitleEl=document.getElementById('analyticsAgentTitle');
+  if(agTitleEl) agTitleEl.innerHTML = `Agent Performance (${isMonth?periodLabel:'All-Time'}) <span style="font-weight:400;color:var(--muted);font-size:11px">— click a row for full detail</span>`;
+
+  try{
+    const [custSnap,noboxSnap,fullHistory]=await Promise.all([
+      db.collection('customers').get(),
+      db.collection('nobox_requests').get(),
+      loadHistoryCache(forceRefresh)
+    ]);
+    const histDocs = isMonth ? fullHistory.filter(d=>(d.archiveDate||'').slice(0,7)===monthVal) : fullHistory;
+
+    const custMap={};
+    custSnap.forEach(doc=>{
+      const d=doc.data();
+      custMap[doc.id]={
+        id:doc.id, name:d.name||'—', boxId:d.boxId||'—', zone:d.zone||'—',
+        phone:d.phone||'', active:d.active!==false,
+        total:0, delivered:0, noboxAgent:0, delayedFlag:0, endedDelayed:0,
+        noboxReqTotal:0, noboxReqYesterday:0
+      };
+    });
+
+    noboxSnap.forEach(doc=>{
+      const d=doc.data();
+      const c=custMap[d.customerId];
+      if(!c) return;
+      c.noboxReqTotal++;
+      if(d.date===yesterday) c.noboxReqYesterday++;
+    });
+
+    const agentMap={};
+    histDocs.forEach(d=>{
+      const c=custMap[d.customerId];
+      if(c){
+        c.total++;
+        if(d.status==='NoBox') c.noboxAgent++;
+        if(d.wasDelayed) c.delayedFlag++;
+        if(d.status==='Delayed') c.endedDelayed++;
+        if(d.status==='Delivered'||d.status==='Picked') c.delivered++;
+      }
+      const auid=d.assignedTo;
+      if(auid){
+        if(!agentMap[auid]) agentMap[auid]={total:0,delivered:0,delayedEnded:0,delayedFlag:0,noBoxAgent:0};
+        const a=agentMap[auid];
+        a.total++;
+        if(d.status==='Delivered'||d.status==='Picked') a.delivered++;
+        if(d.status==='Delayed') a.delayedEnded++;
+        if(d.wasDelayed) a.delayedFlag++;
+        if(d.status==='NoBox') a.noBoxAgent++;
+      }
+    });
+
+    analyticsCustomers=Object.values(custMap).sort((a,b)=>(b.delayedFlag+b.noboxAgent)-(a.delayedFlag+a.noboxAgent));
+    analyticsAgents=Object.entries(agentMap).map(([uid,a])=>({
+      uid, name:agents[uid]?.name||'Unknown', zone:agents[uid]?.zone||'—', email:agents[uid]?.email||'', ...a
+    })).sort((a,b)=>b.total-a.total);
+
+    const totDelayFlag=analyticsCustomers.reduce((s,c)=>s+c.delayedFlag,0);
+    const totEndedDelayed=analyticsCustomers.reduce((s,c)=>s+c.endedDelayed,0);
+    const totNoboxReq=analyticsCustomers.reduce((s,c)=>s+c.noboxReqTotal,0);
+    const setTxt=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    setTxt('an_totalCust',analyticsCustomers.length);
+    setTxt('an_totalDelayedFlag',totDelayFlag);
+    setTxt('an_totalEndedDelayed',totEndedDelayed);
+    setTxt('an_totalNoboxReq',totNoboxReq);
+
+    drawAnalyticsCustomerTable();
+    drawAnalyticsAgentTable();
+
+    // Also refresh the small perf numbers under each agent's name in the
+    // Agents tab, using this same full (unfiltered) cache so they're never
+    // stuck at the old always-0 fields.
+    if(!isMonth) applyAgentPerfToCards(fullHistory);
+
+    analyticsLoaded=true;
+  }catch(e){
+    toast('Analytics load failed: '+e.message,'err');
+  }
+  if(loadingEl) loadingEl.style.display='none';
+}
+
+function drawAnalyticsCustomerTable(){
+  const q=(document.getElementById('analyticsCustSearch')?.value||'').toLowerCase();
+  const rows=analyticsCustomers.filter(c=>!q||c.name.toLowerCase().includes(q)||c.boxId.toLowerCase().includes(q)||c.zone.toLowerCase().includes(q));
+  const body=document.getElementById('analyticsCustomerBody');
+  if(!body) return;
+  body.innerHTML=rows.length?rows.map((c,i)=>`
+    <tr onclick="openCustomerAnalytics('${c.id}')" style="cursor:pointer">
+      <td style="color:var(--muted)">${i+1}</td>
+      <td><span style="background:var(--accentbg);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--accent);font-family:var(--mono)">${c.boxId}</span></td>
+      <td><strong>${c.name}</strong>${c.active?'':' <span style="color:var(--muted);font-size:10px">(paused)</span>'}</td>
+      <td style="font-size:12px"><span style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 7px">${c.zone}</span></td>
+      <td style="text-align:center;font-family:var(--mono)">${c.total}</td>
+      <td style="text-align:center;font-family:var(--mono);color:var(--purple)">${c.noboxAgent}</td>
+      <td style="text-align:center;font-family:var(--mono);color:var(--amber)">${c.delayedFlag}</td>
+      <td style="text-align:center;font-family:var(--mono);color:var(--red)">${c.endedDelayed}</td>
+      <td style="text-align:center;font-family:var(--mono);color:var(--teal)">${c.noboxReqTotal}${c.noboxReqYesterday?` <span class="badge badge-nobox" title="Informed no-box for yesterday (${yesterday})">${c.noboxReqYesterday} yest.</span>`:''}</td>
+    </tr>`).join('')
+    :'<tr><td colspan="9" class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No customer history yet.</div></td></tr>';
+}
+
+function drawAnalyticsAgentTable(){
+  const body=document.getElementById('analyticsAgentBody');
+  if(!body) return;
+  body.innerHTML=analyticsAgents.length?analyticsAgents.map((a,i)=>{
+    const rate=a.total>0?Math.round((a.delivered*100)/a.total):0;
+    return `<tr onclick="openAgentAnalytics('${a.uid}')" style="cursor:pointer">
+      <td style="color:var(--muted)">${i+1}</td>
+      <td><strong>${a.name}</strong></td>
+      <td style="font-size:12px"><span style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 7px">${a.zone}</span></td>
+      <td style="text-align:center;font-family:var(--mono)">${a.total}</td>
+      <td style="text-align:center;font-family:var(--mono);color:var(--green)">${a.delivered}</td>
+      <td style="text-align:center;font-family:var(--mono);color:var(--red)">${a.delayedEnded}</td>
+      <td style="text-align:center;font-family:var(--mono);color:var(--accent)">${rate}%</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="7" class="empty-state"><div class="empty-icon">👤</div><div class="empty-text">No agent activity yet.</div></td></tr>';
+}
+
+function openCustomerAnalytics(id){
+  const c=analyticsCustomers.find(x=>x.id===id);
+  if(!c){toast('No history found for this customer yet','err');return;}
+  document.getElementById('caTitle').textContent=c.name+' — '+c.boxId;
+  document.getElementById('caBody').innerHTML=`
+    <div class="ag-stats" style="grid-template-columns:repeat(2,1fr);margin-bottom:10px">
+      <div class="ag-stat"><div class="num">${c.total}</div><div class="lbl">Total Deliveries</div></div>
+      <div class="ag-stat"><div class="num" style="color:var(--green)">${c.delivered}</div><div class="lbl">Completed</div></div>
+      <div class="ag-stat"><div class="num" style="color:var(--purple)">${c.noboxAgent}</div><div class="lbl">No Box (Agent Reported)</div></div>
+      <div class="ag-stat"><div class="num" style="color:var(--teal)">${c.noboxReqTotal}</div><div class="lbl">No Box Requests (Self)</div></div>
+      <div class="ag-stat"><div class="num" style="color:var(--amber)">${c.delayedFlag}</div><div class="lbl">Times Delayed</div></div>
+      <div class="ag-stat"><div class="num" style="color:var(--red)">${c.endedDelayed}</div><div class="lbl">Ended Delayed (Never Picked)</div></div>
+    </div>
+    ${c.noboxReqYesterday>0
+      ?`<div class="info-box purple">📦 Informed No Box for yesterday (${yesterday}) — ${c.noboxReqYesterday} request(s), counted separately from their all-time total above.</div>`
+      :`<div class="info-box teal">No no-box request logged for yesterday (${yesterday}).</div>`}
+    <div style="font-size:12px;color:var(--muted);margin-top:10px">Zone: ${c.zone} · Phone: ${c.phone||'—'}</div>
+  `;
+  openM('customerAnalyticsModal');
+}
+
+function openAgentAnalytics(uid){
+  const a=analyticsAgents.find(x=>x.uid===uid);
+  if(!a){toast('No history found for this agent yet','err');return;}
+  const rate=a.total>0?Math.round((a.delivered*100)/a.total):0;
+  document.getElementById('aaTitle').textContent=a.name;
+  document.getElementById('aaBody').innerHTML=`
+    <div class="ag-stats" style="grid-template-columns:repeat(2,1fr);margin-bottom:10px">
+      <div class="ag-stat"><div class="num">${a.total}</div><div class="lbl">Total Handled</div></div>
+      <div class="ag-stat"><div class="num" style="color:var(--green)">${a.delivered}</div><div class="lbl">Completed</div></div>
+      <div class="ag-stat"><div class="num" style="color:var(--red)">${a.delayedEnded}</div><div class="lbl">Ended Delayed</div></div>
+      <div class="ag-stat"><div class="num" style="color:var(--amber)">${a.delayedFlag}</div><div class="lbl">Times Delayed</div></div>
+      <div class="ag-stat"><div class="num" style="color:var(--purple)">${a.noBoxAgent}</div><div class="lbl">No Box Marked</div></div>
+      <div class="ag-stat"><div class="num" style="color:var(--accent)">${rate}%</div><div class="lbl">Completion Rate</div></div>
+    </div>
+    <div class="info-box">"Total Handled" counts every archived delivery ever assigned to this agent — used here as the app-usage proxy since login/session tracking isn't wired up yet. That's a good next step once you're on Blaze.</div>
+  `;
+  openM('agentAnalyticsModal');
+}
+
+// ── GLOBAL PIN ──
+async function saveGlobalPin(){
+  const pin=document.getElementById('globalPinInp').value.trim();
+  if(pin.length!==4){toast('Enter a 4-digit PIN','err');return;}
+  await db.collection('config').doc('app').set({customerPin:pin},{merge:true});
+  const msg=document.getElementById('pinSaveMsg');
+  msg.textContent='✅ PIN saved! Customers can now sign in with PIN: '+pin;
+  msg.style.display='block';
+  toast('Global PIN updated to '+pin,'ok');
+}
+async function loadGlobalPin(){
+  const snap=await db.collection('config').doc('app').get().catch(()=>null);
+  if(snap&&snap.exists&&snap.data().customerPin){
+    document.getElementById('globalPinInp').value=snap.data().customerPin;
+  }
+}
+async function triggerReset(auto){
+  auto = !!auto;
+  if(!auto && !confirm('Archive all current deliveries and clear the list for tomorrow?'))return;
+  const btn=document.getElementById('btnReset');
+  if(btn){btn.disabled=true;btn.textContent='Archiving...';}
+  try{
+    const snap=await db.collection('deliveries').get();
+    const t=snap.size;
+    if(t===0){
+      if(btn){btn.disabled=false;btn.textContent='Archive & Reset for Tomorrow';}
+      if(!auto) toast('No deliveries to archive','info');
+      await db.collection('config').doc('app').set({lastAutoReset:today},{merge:true}).catch(()=>{});
+      return;
+    }
+    let del=0,dly=0,pnd=0;
+    snap.forEach(d=>{const s=d.data().status||'';if(s==='Delivered'||s==='Picked')del++;else if(s==='Delayed')dly++;else pnd++;});
+    const pct=t>0?Math.round((del*100)/t):0;
+    let batch=db.batch(),ops=0;
+    for(const doc of snap.docs){
+      batch.set(db.doc('history/'+today+'/deliveries/'+doc.id),{...doc.data(),archiveDate:today,archivedAt:Date.now()});
+      batch.delete(doc.ref);ops+=2;
+      if(ops>=490){await batch.commit();batch=db.batch();ops=0;}
+    }
+    batch.set(db.doc('history/'+today+'/summary/stats'),{date:today,totalDeliveries:t,delivered:del,delayed:dly,pending:pnd,completionRate:pct,archivedAt:Date.now()});
+    await batch.commit();
+    await db.collection('config').doc('app').set({lastAutoReset:today},{merge:true}).catch(()=>{});
+    historyCache = null; // today's freshly-archived batch isn't in the cache yet
+    if(btn){btn.disabled=false;btn.textContent='Archive & Reset for Tomorrow';}
+    const rm=document.getElementById('resetResultMsg');
+    if(rm){rm.style.display='block';rm.textContent='✅ Archived '+t+' deliveries — '+pct+'% completion rate — ready for tomorrow!';}
+    toast(auto?'Auto Reset complete!':'Reset complete!','ok');
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='Archive & Reset for Tomorrow';}
+    toast('Reset failed: '+e.message,'err');
+  }
+}
+
+// ── HELPERS ──
+function openM(id){document.getElementById(id).classList.add('open');}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+function doLogout(){auth.signOut();}
+function gv(id){return(document.getElementById(id)?.value||'').trim();}
+function escQ(s){return(s||'').replace(/'/g,"\\'");}
+function copyUID(uid){navigator.clipboard.writeText(uid).then(()=>toast('UID copied!','ok'));}
+let _tt;
+function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type?' '+type:'');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),4000);}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+async function markAllDelivered() {
+  const count = allDeliveries.filter(d => 
+    d.deliveryDate === today && d.status !== 'Delivered'
+  ).length;
+  
+  if (count === 0) { toast('All deliveries already marked delivered', 'info'); return; }
+  
+  if (!confirm(`Mark all ${count} remaining deliveries as Delivered?\n\nThis updates all customer dashboards instantly.`)) return;
+
+  const btn = document.getElementById('btnMarkAllDelivered');
+  if (btn) { btn.disabled = true; btn.textContent = 'Updating...'; }
+
+  try {
+    let batch = db.batch();
+    let ops = 0;
+
+    for (const d of allDeliveries) {
+      if (d.deliveryDate === today && d.status !== 'Delivered') {
+        batch.update(db.collection('deliveries').doc(d.id), {
+          status: 'Delivered',
+          timestamp: Date.now(),
+          deliveredAt: Date.now()
+        });
+        ops++;
+        if (ops >= 490) {
+          await batch.commit();
+          batch = db.batch();
+          ops = 0;
+        }
+      }
+    }
+    if (ops > 0) await batch.commit();
+
+    toast('All deliveries marked as Delivered! Customers can see it now.', 'ok');
+  } catch(e) {
+    toast('Error: ' + e.message, 'err');
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = '✅ Mark All Delivered'; }
+}
+</script>
+</body>
+</html>
