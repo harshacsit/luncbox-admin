@@ -25,6 +25,7 @@ function nav(id, el) {
   
   const pageTitle = document.getElementById('pageTitle');
   if (pageTitle) pageTitle.textContent = panelTitles[id] || id;
+  document.title = (panelTitles[id]||id) + ' · Lunchbox Admin';
   
   const markBtn = document.getElementById('btnMarkAllDelivered');
   if (markBtn) markBtn.style.display = (id === 'overview' || id === 'deliveries') ? '' : 'none';

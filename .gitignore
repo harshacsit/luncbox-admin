@@ -1,0 +1,54 @@
+# ── SECRETS & CONFIG ─────────────────────────────────────────
+# Firebase config (contains API keys, project IDs, appId)
+project/js/firebase-init.js
+
+# Environment / secret files (if added later)
+.env
+.env.*
+!.env.example
+*.env
+
+# WATI / Twilio credentials (stored in localStorage by the app,
+# but guard any future server-side config files here)
+wati.config.js
+twilio.config.js
+secrets.json
+credentials.json
+service-account*.json
+google-services.json
+
+# ── OS & EDITOR ARTIFACTS ─────────────────────────────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+
+# Windows
+ehthumbs.db
+ehthumbs_vista.db
+[Tt]humbs.db
+$RECYCLE.BIN/
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+
+# JetBrains IDEs
+.idea/
+*.iml
+
+# ── NODE / NPM (in case a build step is added later) ──────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+dist/
+.cache/
+
+# ── LOGS ─────────────────────────────────────────────────────
+*.log
+logs/

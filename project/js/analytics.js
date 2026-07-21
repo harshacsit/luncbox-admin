@@ -120,6 +120,7 @@ async function loadAnalytics(forceRefresh) {
     toast('Analytics load failed: ' + e.message, 'err');
   }
   if (loadingEl) loadingEl.style.display = 'none';
+  loadWeeklyTrend();
 }
 
 function drawAnalyticsCustomerTable() {
@@ -203,4 +204,81 @@ function openAgentAnalytics(uid) {
     `;
   }
   openM('agentAnalyticsModal');
+}
+let weeklyChartInstance = null;
+
+// Reads only the tiny daily summary docs (history/{date}/summary/stats), not
+// every delivery — cheap regardless of how much history has piled up, and
+// needs no composite index since it's an unfiltered collectionGroup fetch.
+async function loadWeeklyTrend(){
+  const canvas = document.getElementById('weeklyTrendChart');
+  if(!canvas || typeof Chart === 'undefined') return;
+
+  const snap = await db.collectionGroup('summary').get().catch(()=>null);
+  if(!snap || snap.empty) return;
+
+  const byWeek = {};
+  snap.forEach(doc=>{
+    const d = doc.data();
+    if(!d.date) return;
+    const wk = mondayOf(d.date);
+    if(!byWeek[wk]) byWeek[wk] = {total:0, delivered:0};
+    byWeek[wk].total     += d.totalDeliveries || 0;
+    byWeek[wk].delivered += d.delivered || 0;
+  });
+
+  const weeks = Object.keys(byWeek).sort().slice(-8); // last 8 weeks
+  if(!weeks.length) return;
+
+  const labels = weeks.map(w=>{
+    const start = new Date(w+'T00:00:00');
+    const end   = new Date(start); end.setDate(start.getDate()+6);
+    return start.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+'–'+end.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+  });
+  const rates  = weeks.map(w=> byWeek[w].total>0 ? Math.round((byWeek[w].delivered*100)/byWeek[w].total) : 0);
+  const totals = weeks.map(w=> byWeek[w].total);
+
+  const rangeEl = document.getElementById('weeklyChartRange');
+  if(rangeEl) rangeEl.textContent = weeks.length>1 ? `${labels[0]} → ${labels[labels.length-1]}` : labels[0];
+
+  if(weeklyChartInstance) weeklyChartInstance.destroy();
+  weeklyChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar', label: 'Total Deliveries', data: totals,
+          backgroundColor: 'rgba(230,81,0,.12)', borderRadius: 4,
+          yAxisID: 'yTotal', order: 2
+        },
+        {
+          type: 'line', label: 'Completion Rate %', data: rates,
+          borderColor: '#16A34A', backgroundColor: 'rgba(22,163,74,.12)',
+          tension: 0.35, fill: true, pointRadius: 4, pointBackgroundColor: '#16A34A',
+          yAxisID: 'yRate', order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.formattedValue + (c.dataset.yAxisID==='yRate' ? '%' : '') } }
+      },
+      scales: {
+        yTotal: { position: 'left',  beginAtZero: true, grid: { display:false }, title:{display:true,text:'Deliveries',font:{size:10}} },
+        yRate:  { position: 'right', beginAtZero: true, max: 100, grid: { display:false }, ticks:{callback:v=>v+'%'}, title:{display:true,text:'Completion %',font:{size:10}} }
+      }
+    }
+  });
+}
+
+// Monday of the week containing a YYYY-MM-DD date string
+function mondayOf(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day===0 ? -6 : 1-day));
+  return d.toISOString().split('T')[0];
 }
