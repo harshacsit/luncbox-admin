@@ -1,0 +1,100 @@
+// ══ ROUTE AUTO ASSIGNMENT ══
+
+async function previewAssign() {
+  if (!Object.keys(agents).length) { toast('No agents found', 'err'); return; }
+  try {
+    const snap = await db.collection('customers').get();
+    const customers = []; snap.forEach(doc => { const d = doc.data(); if (d.active !== false) customers.push({ id: doc.id, ...d }); });
+    if (!customers.length) { toast('No customers found', 'err'); return; }
+    const agList = Object.entries(agents).map(([uid, d]) => ({ uid, name: d.name, zone: d.zone || '', maxDeliveries: d.maxDeliveries || 999 }));
+    const result = _assignCustomers(customers, agList);
+    const assignPreviewEl = document.getElementById('assignPreview');
+    if (assignPreviewEl) {
+      assignPreviewEl.innerHTML = Object.entries(result).map(([uid, custs]) => `<div class="assign-agent-card"><div class="assign-agent-name">${agents[uid]?.name || uid}</div><div class="assign-count" style="color:var(--green);font-weight:600">${custs.length} deliveries</div><div style="margin-top:6px;font-size:11px;color:var(--muted)">${custs.slice(0, 4).map(c => c.name).join(', ')}${custs.length > 4 ? ` +${custs.length - 4} more` : ''}</div></div>`).join('');
+    }
+    toast('Preview ready', 'info');
+  } catch (e) { toast('Preview failed: ' + e.message, 'err'); }
+}
+
+async function runAssign(auto) {
+  auto = !!auto;
+  if (!Object.keys(agents).length) { if (!auto) toast('No agents found', 'err'); return; }
+  if (!auto && !confirm('Assign today\'s deliveries to all agents?')) return;
+  const btn = document.querySelector('#panel-assign .topbar-btn.green-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Working...'; }
+  const progEl = document.getElementById('assignProgress');
+  const barEl = document.getElementById('assignBar');
+  const statusEl = document.getElementById('assignStatus');
+  if (progEl) progEl.style.display = 'block';
+  if (barEl) barEl.style.width = '5%';
+  if (statusEl) statusEl.textContent = 'Reading customers...';
+  try {
+    const snap = await db.collection('customers').get();
+    const customers = []; snap.forEach(doc => { const d = doc.data(); if (d.active !== false) customers.push({ id: doc.id, ...d }); });
+    if (!customers.length) {
+      if (!auto) toast('No customers found', 'err');
+      if (progEl) progEl.style.display = 'none';
+      if (btn) { btn.disabled = false; btn.textContent = '🚀 Assign Today\'s Routes'; }
+      return;
+    }
+    const existing = await db.collection('deliveries').where('deliveryDate', '==', today).limit(1).get();
+    if (!existing.empty) {
+      if (auto) {
+        await db.collection('config').doc('app').set({ lastAutoAssign: today }, { merge: true }).catch(() => {});
+        if (progEl) progEl.style.display = 'none';
+        if (btn) { btn.disabled = false; btn.textContent = '🚀 Assign Today\'s Routes'; }
+        return;
+      }
+      const ok = confirm(`Deliveries for today already exist.\n\nDelete and reassign fresh?`);
+      if (!ok) { if (progEl) progEl.style.display = 'none'; if (btn) { btn.disabled = false; btn.textContent = '🚀 Assign Today\'s Routes'; } return; }
+      const allToday = await db.collection('deliveries').where('deliveryDate', '==', today).get();
+      const delBatch = db.batch(); allToday.forEach(d => delBatch.delete(d.ref)); await delBatch.commit();
+    }
+    if (barEl) barEl.style.width = '25%';
+    const agList = Object.entries(agents).map(([uid, d]) => ({ uid, name: d.name, zone: d.zone || '', maxDeliveries: d.maxDeliveries || 999 }));
+    const result = _assignCustomers(customers, agList);
+    let batch = db.batch(), ops = 0, done = 0, total = customers.length;
+    for (const [uid, custs] of Object.entries(result)) {
+      for (let i = 0; i < custs.length; i++) {
+        const c = custs[i];
+        batch.set(db.collection('deliveries').doc(), {
+          customerName: c.name || '', customerPhone: c.phone || '', pickupLocation: c.pickupLocation || '',
+          deliveryAddress: c.deliveryAddress || '', notes: c.notes || '', itemCount: c.itemCount || 1,
+          customerId: c.id, boxId: c.boxId || '', assignedTo: uid, assignedName: agents[uid]?.name || '',
+          agentPhone: agents[uid]?.phone || '',
+          status: 'Pending', pickupOrder: i + 1, deliveryDate: today, timestamp: Date.now() + done
+        });
+        ops++; done++;
+        if (ops >= 490) { await batch.commit(); batch = db.batch(); ops = 0; }
+        if (barEl) barEl.style.width = Math.round(25 + (done / total) * 70) + '%';
+        if (statusEl) statusEl.textContent = 'Writing ' + done + ' of ' + total + '...';
+      }
+    }
+    if (ops > 0) await batch.commit();
+    await db.collection('config').doc('app').set({ lastAutoAssign: today }, { merge: true }).catch(() => {});
+    if (barEl) barEl.style.width = '100%';
+    if (statusEl) statusEl.textContent = '✅ Done! ' + total + ' deliveries created.';
+    toast((auto ? 'Auto Assign: ' : '') + total + ' deliveries assigned to ' + agList.length + ' agents!', 'ok');
+    setTimeout(() => { if (progEl) progEl.style.display = 'none'; }, 3000);
+  } catch (e) {
+    if (progEl) progEl.style.display = 'none';
+    toast('Error: ' + e.message, 'err');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '🚀 Assign Today\'s Routes'; }
+}
+
+function _assignCustomers(customers, agentList) {
+  const result = {}; agentList.forEach(a => { result[a.uid] = []; });
+  const unassigned = [];
+  for (const c of customers) { if (c.assignedAgent && result[c.assignedAgent] !== undefined) result[c.assignedAgent].push(c); else unassigned.push(c); }
+  const noZone = [];
+  for (const c of unassigned) { const cz = (c.zone || '').toLowerCase(); const match = agentList.find(a => a.zone && cz && cz.includes(a.zone.toLowerCase()) && result[a.uid].length < a.maxDeliveries); if (match) result[match.uid].push(c); else noZone.push(c); }
+  for (const c of noZone) { let least = agentList[0]; for (const a of agentList) if (result[a.uid].length < result[least.uid].length) least = a; result[least.uid].push(c); }
+  for (const uid in result) result[uid].sort((a, b) => {
+    const ra = (a.routeOrder != null) ? a.routeOrder : 999999;
+    const rb = (b.routeOrder != null) ? b.routeOrder : 999999;
+    if (ra !== rb) return ra - rb;
+    return (a.pickupLocation || '').localeCompare(b.pickupLocation || '');
+  });
+  return result;
+}
