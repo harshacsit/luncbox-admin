@@ -17,6 +17,7 @@ const panelTitles = {
 };
 
 function nav(id, el) {
+   toggleSidebar(false);
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const targetPanel = document.getElementById('panel-' + id);
@@ -34,7 +35,7 @@ function nav(id, el) {
   if (id === 'nobox') loadNoBoxRequests();
   if (id === 'broadcast') loadBroadcastLog();
   if (id === 'reset') loadGlobalPin();
-  if (id === 'analytics' && !analyticsLoaded) loadAnalytics();
+  if (id === 'analytics') { if (!analyticsLoaded) loadAnalytics(); else refreshAnalyticsCharts(); }
 }
 
 function openM(id) {
@@ -45,6 +46,21 @@ function openM(id) {
 function closeM(id) {
   const el = document.getElementById(id);
   if (el) el.classList.remove('open');
+}
+let _confirmResolve=null;
+function askConfirm(message, opts={}){
+  const {title='Please confirm', confirmLabel='Confirm', danger=false}=opts;
+  document.getElementById('confirmModalTitle').textContent=title;
+  document.getElementById('confirmModalMsg').textContent=message;
+  const btn=document.getElementById('confirmModalBtn');
+  btn.textContent=confirmLabel;
+  btn.style.background = danger ? 'var(--red)' : '';
+  openM('confirmModal');
+  return new Promise(resolve=>{ _confirmResolve=resolve; });
+}
+function _confirmModalRespond(result){
+  closeM('confirmModal');
+  if(_confirmResolve){ _confirmResolve(result); _confirmResolve=null; }
 }
 
 function gv(id) {
@@ -77,10 +93,31 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   const ovDateEl = document.getElementById('ov_date');
   if (ovDateEl) ovDateEl.textContent = today;
-
-  document.querySelectorAll('.modal-overlay').forEach(m => {
-    m.addEventListener('click', e => {
-      if (e.target === m) m.classList.remove('open');
-    });
-  });
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{
+  if(e.target===m){
+    m.classList.remove('open');
+    if(m.id==='confirmModal' && _confirmResolve){ _confirmResolve(false); _confirmResolve=null; }
+  }
+}));
 });
+function toggleSidebar(force){
+  const shell = document.querySelector('.shell');
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebarOverlay');
+  if(!sb) return;
+
+  const isMobile = window.matchMedia('(max-width:768px)').matches;
+
+  if (isMobile) {
+    const show = typeof force === 'boolean' ? force : !sb.classList.contains('open');
+    sb.classList.toggle('open', show);
+    if(ov) ov.classList.toggle('show', show);
+    return;
+  }
+
+  if (!shell) return;
+  const shouldCollapse = typeof force === 'boolean' ? force : !shell.classList.contains('sidebar-collapsed');
+  shell.classList.toggle('sidebar-collapsed', shouldCollapse);
+  sb.classList.remove('open');
+  if(ov) ov.classList.remove('show');
+}

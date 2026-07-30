@@ -52,37 +52,82 @@ async function loadGlobalPin() {
     if (pinInp) pinInp.value = snap.data().customerPin;
   }
 }
+// ── SHARED ARCHIVER ──
+// includeToday=true  → archives every delivery currently in the collection
+//                      (used by the manual "Archive & Reset" button)
+// includeToday=false → archives only leftovers from a PREVIOUS day, leaving
+//                      today's deliveries untouched (used automatically by
+//                      Auto Assign, so a missed reset never blocks tomorrow)
+// Each doc is always filed under ITS OWN deliveryDate, never "today" —
+// this is the fix for the misfiled-history bug.
+async function archiveDeliveries(includeToday) {
+  const snap = await db.collection('deliveries').get();
+  const toArchive = snap.docs.filter(doc => includeToday || (doc.data().deliveryDate || today) !== today);
+  if (!toArchive.length) return { archivedDates: [], archivedCount: 0 };
 
+  const groups = {};
+  toArchive.forEach(doc => {
+    const date = doc.data().deliveryDate || today;
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(doc);
+  });
+
+  const archivedDates = [];
+  let archivedCount = 0;
+
+  for (const [date, docs] of Object.entries(groups)) {
+    let del = 0, dly = 0, pnd = 0;
+    docs.forEach(doc => {
+      const s = doc.data().status || '';
+      if (s === 'Delivered' || s === 'Picked') del++;
+      else if (s === 'Delayed') dly++;
+      else pnd++;
+    });
+
+    // Merge with any existing summary for that date, in case it was
+    // already partially archived earlier
+    const summaryRef = db.doc('history/' + date + '/summary/stats');
+    const existing = await summaryRef.get().catch(() => null);
+    const prev = (existing && existing.exists) ? existing.data() : {};
+    const totalDeliveries = (prev.totalDeliveries || 0) + docs.length;
+    const delivered = (prev.delivered || 0) + del;
+    const delayed = (prev.delayed || 0) + dly;
+    const pending = (prev.pending || 0) + pnd;
+    const completionRate = totalDeliveries > 0 ? Math.round((delivered * 100) / totalDeliveries) : 0;
+
+    let batch = db.batch(), ops = 0;
+    for (const doc of docs) {
+      batch.set(db.doc('history/' + date + '/deliveries/' + doc.id), { ...doc.data(), archiveDate: date, archivedAt: Date.now() });
+      batch.delete(doc.ref);
+      ops += 2;
+      if (ops >= 480) { await batch.commit(); batch = db.batch(); ops = 0; }
+    }
+    batch.set(summaryRef, { date, totalDeliveries, delivered, delayed, pending, completionRate, archivedAt: Date.now() }, { merge: true });
+    await batch.commit();
+
+    archivedDates.push(date);
+    archivedCount += docs.length;
+  }
+
+  historyCache = null; // invalidate so Analytics re-fetches fresh data
+  return { archivedDates, archivedCount };
+}
 async function triggerReset(auto) {
   auto = !!auto;
   if (!auto && !confirm('Archive all current deliveries and clear the list for tomorrow?')) return;
   const btn = document.getElementById('btnReset');
   if (btn) { btn.disabled = true; btn.textContent = 'Archiving...'; }
   try {
-    const snap = await db.collection('deliveries').get();
-    const t = snap.size;
-    if (t === 0) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Archive & Reset for Tomorrow'; }
-      if (!auto) toast('No deliveries to archive', 'info');
-      await db.collection('config').doc('app').set({ lastAutoReset: today }, { merge: true }).catch(() => {});
-      return;
-    }
-    let del = 0, dly = 0, pnd = 0;
-    snap.forEach(d => { const s = d.data().status || ''; if (s === 'Delivered' || s === 'Picked') del++; else if (s === 'Delayed') dly++; else pnd++; });
-    const pct = t > 0 ? Math.round((del * 100) / t) : 0;
-    let batch = db.batch(), ops = 0;
-    for (const doc of snap.docs) {
-      batch.set(db.doc('history/' + today + '/deliveries/' + doc.id), { ...doc.data(), archiveDate: today, archivedAt: Date.now() });
-      batch.delete(doc.ref); ops += 2;
-      if (ops >= 490) { await batch.commit(); batch = db.batch(); ops = 0; }
-    }
-    batch.set(db.doc('history/' + today + '/summary/stats'), { date: today, totalDeliveries: t, delivered: del, delayed: dly, pending: pnd, completionRate: pct, archivedAt: Date.now() });
-    await batch.commit();
+    const result = await archiveDeliveries(true); // true = archive everything, including today's
     await db.collection('config').doc('app').set({ lastAutoReset: today }, { merge: true }).catch(() => {});
-    historyCache = null;
     if (btn) { btn.disabled = false; btn.textContent = 'Archive & Reset for Tomorrow'; }
     const rm = document.getElementById('resetResultMsg');
-    if (rm) { rm.style.display = 'block'; rm.textContent = '✅ Archived ' + t + ' deliveries — ' + pct + '% completion rate — ready for tomorrow!'; }
+    if (rm) {
+      rm.style.display = 'block';
+      rm.textContent = result.archivedCount
+        ? `✅ Archived ${result.archivedCount} deliveries across ${result.archivedDates.length} date(s) (${result.archivedDates.join(', ')}) — ready for tomorrow!`
+        : 'No deliveries to archive.';
+    }
     toast(auto ? 'Auto Reset complete!' : 'Reset complete!', 'ok');
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Archive & Reset for Tomorrow'; }

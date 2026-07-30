@@ -19,7 +19,7 @@ async function previewAssign() {
 async function runAssign(auto) {
   auto = !!auto;
   if (!Object.keys(agents).length) { if (!auto) toast('No agents found', 'err'); return; }
-  if (!auto && !confirm('Assign today\'s deliveries to all agents?')) return;
+  if (!auto && !(await askConfirm('Assign today\'s deliveries to all agents?', {title:'Assign Today\'s Routes?', confirmLabel:'Assign', danger:false}))) return;
   const btn = document.querySelector('#panel-assign .topbar-btn.green-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Working...'; }
   const progEl = document.getElementById('assignProgress');
@@ -28,6 +28,17 @@ async function runAssign(auto) {
   if (progEl) progEl.style.display = 'block';
   if (barEl) barEl.style.width = '5%';
   if (statusEl) statusEl.textContent = 'Reading customers...';
+// Auto-heal: archive any leftover deliveries from a previous day BEFORE
+// creating today's routes. This means a forgotten manual reset no longer
+// blocks or corrupts anything — it's handled here automatically.
+try {
+  const cleanup = await archiveDeliveries(false); // false = only non-today leftovers
+  if (cleanup.archivedCount && statusEl) {
+    statusEl.textContent = `Archived ${cleanup.archivedCount} leftover deliveries from ${cleanup.archivedDates.join(', ')}...`;
+  }
+} catch (e) {
+  console.error('Leftover archive failed:', e);
+}
   try {
     const snap = await db.collection('customers').get();
     const customers = []; snap.forEach(doc => { const d = doc.data(); if (d.active !== false) customers.push({ id: doc.id, ...d }); });
@@ -45,7 +56,7 @@ async function runAssign(auto) {
         if (btn) { btn.disabled = false; btn.textContent = '🚀 Assign Today\'s Routes'; }
         return;
       }
-      const ok = confirm(`Deliveries for today already exist.\n\nDelete and reassign fresh?`);
+      const ok = await askConfirm(`Deliveries for today already exist.\n\nDelete and reassign fresh?`, {title:'Reassign Today\'s Deliveries?', confirmLabel:'Delete & Reassign', danger:true});
       if (!ok) { if (progEl) progEl.style.display = 'none'; if (btn) { btn.disabled = false; btn.textContent = '🚀 Assign Today\'s Routes'; } return; }
       const allToday = await db.collection('deliveries').where('deliveryDate', '==', today).get();
       const delBatch = db.batch(); allToday.forEach(d => delBatch.delete(d.ref)); await delBatch.commit();

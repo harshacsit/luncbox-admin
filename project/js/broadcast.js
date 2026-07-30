@@ -60,7 +60,7 @@ function updatePreview() {
 function openM_broadcast() {
   const msg = (document.getElementById('broadcastMsg')?.value || '').trim();
   if (!msg) { toast('Enter a message first', 'err'); return; }
-  if (!twilioConfig.endpoint && !twilioConfig.sid) { toast('Save WATI credentials first', 'err'); return; }
+  if (!twilioConfig.endpoint) { toast('Save WATI credentials first', 'err'); return; }
   const bcdEl = document.getElementById('broadcastConfirmDetails'); if (bcdEl) bcdEl.textContent = `Channel: ${broadcastChannel.toUpperCase()} · Recipients: ${broadcastRecipient}`;
   const bcmEl = document.getElementById('broadcastConfirmMsg'); if (bcmEl) bcmEl.textContent = msg.substring(0, 100) + (msg.length > 100 ? '...' : '');
   openM('broadcastConfirmModal');

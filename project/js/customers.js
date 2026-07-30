@@ -40,8 +40,12 @@ function pauseCustomer(id) {
   db.collection('customers').doc(id).update({ active: false }).then(() => { loadCustomers(); toast('Customer paused', 'ok'); }).catch(e => toast(e.message, 'err'));
 }
 
-function deleteCustomer(id, name) {
-  if (!confirm(`Delete ${name || 'this customer'} from the Customer Master List?\n\nThis only removes them from future Auto Assign. Their past deliveries and history stay archived and are never deleted.`)) return;
+async function deleteCustomer(id, name) {
+  const ok = await askConfirm(
+    `This only removes them from future Auto Assign. Their past deliveries and history stay archived and are never deleted.`,
+    {title:`Delete ${name||'this customer'}?`, confirmLabel:'Delete', danger:true}
+  );
+  if (!ok) return;
   db.collection('customers').doc(id).delete()
     .then(() => { loadCustomers(); toast('Customer deleted — delivery history is safe', 'ok'); })
     .catch(e => toast('Delete failed: ' + e.message, 'err'));

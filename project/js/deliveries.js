@@ -5,7 +5,7 @@ function listenDeliveries() {
     allDeliveries = [];
     snap.forEach(doc => { const d = doc.data(); d.id = doc.id; allDeliveries.push(d); });
     allDeliveries.sort((a, b) => (a.pickupOrder || 999) - (b.pickupOrder || 999));
-    updateStats(); renderDeliveries(); renderDelayed(); renderAgentLoad(); renderRecentActivity();
+    updateStats(); renderDeliveries(); renderDelayed(); renderAgentLoad(); renderRecentActivity(); renderStatusBreakdownChart();
   }, e => toast('Listener error: ' + e.message, 'err'));
 }
 
@@ -208,7 +208,8 @@ async function markAllDelivered() {
 
   if (count === 0) { toast('All deliveries already marked delivered', 'info'); return; }
 
-  if (!confirm(`Mark all ${count} remaining deliveries as Delivered?\n\nThis updates all customer dashboards instantly.`)) return;
+  const ok = await askConfirm('This updates all customer dashboards instantly.', {title:`Mark all ${count} remaining deliveries as Delivered?`, confirmLabel:'Mark Delivered'});
+  if (!ok) return;
 
   const btn = document.getElementById('btnMarkAllDelivered');
   if (btn) { btn.disabled = true; btn.textContent = 'Updating...'; }

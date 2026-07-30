@@ -71,10 +71,27 @@ function createAgent() {
       return db.collection('users').doc(data.localId).set({ userId: data.localId, name: n, phone: ph, email: em, role: 'delivery', zone: zn, maxDeliveries: mx, fcmToken: '', totalDeliveries: 0, completedDeliveries: 0, active: true });
     }).then(() => {
       btn.disabled = false; btn.textContent = 'Create Agent'; closeM('addAgentModal'); loadAgents();
-      alert(`✅ Agent created!\n\nShare these login details with ${n}:\n\nEmail: ${em}\nPassword: ${pw}\n\nThey use these to login to the Android app.`);
+      showAgentCredentials(n, em, pw);
       toast('Agent ' + n + ' created!', 'ok');
       ['aN', 'aPh', 'aEm', 'aPw', 'aZn'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     }).catch(e => { btn.disabled = false; btn.textContent = 'Create Agent'; let msg = e.message; if (msg.includes('EMAIL_EXISTS')) msg = 'Email already registered.'; toast('Failed: ' + msg, 'err'); });
+}
+
+let _lastAgentCreds=null;
+function showAgentCredentials(name,email,pass){
+  _lastAgentCreds={name,email,pass};
+  const nameEl = document.getElementById('credAgentName');
+  const emailEl = document.getElementById('credAgentEmail');
+  const passEl = document.getElementById('credAgentPass');
+  if (nameEl) nameEl.textContent=name;
+  if (emailEl) emailEl.textContent=email;
+  if (passEl) passEl.textContent=pass;
+  openM('credentialsModal');
+}
+function copyAgentCredentials(){
+  if(!_lastAgentCreds) return;
+  navigator.clipboard.writeText(`Email: ${_lastAgentCreds.email}\nPassword: ${_lastAgentCreds.pass}`)
+    .then(()=>toast('Credentials copied!','ok')).catch(()=>toast('Could not copy — select manually','err'));
 }
 
 function openEditAgent(uid) {
