@@ -10,8 +10,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" onerror="window.__chartCdnFailed=true"></script>
 <link rel="stylesheet" href="project/css/admin.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%B1%3C/text%3E%3C/svg%3E">
 </head>
 <body>
@@ -42,51 +42,48 @@
 <!-- ═══════════════════ DASHBOARD SCREEN ═══════════════════ -->
 <div class="app-screen" id="screen-dashboard">
 <div class="shell">
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
+
 <!-- SIDEBAR -->
-<div class="sidebar" id="sidebar">
+<div class="sidebar">
   <div class="brand">
     <div class="brand-mark">
       <div class="brand-icon">🍱</div>
       <div><div class="brand-name">Lunchbox</div><div class="brand-sub">Command Centre</div></div>
     </div>
-    <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" onclick="toggleSidebar()" title="Collapse sidebar">
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-    </button>
   </div>
   <div class="nav-section">
     <div class="nav-label">Overview</div>
-    <div class="nav-item active" onclick="nav('overview',this)"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span>Dashboard</span></div>
+    <div class="nav-item active" onclick="nav('overview',this)"><span class="ni">◈</span><span>Dashboard</span></div>
     <div class="nav-item" onclick="nav('delayed',this)">
-      <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><span>Delayed</span>
+      <span class="ni">⚡</span><span>Delayed</span>
       <span class="nav-badge" id="delayedBadge" style="display:none">0</span>
     </div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Operations</div>
-    <div class="nav-item" onclick="nav('assign',this)"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span><span>Auto Assign</span></div>
-    <div class="nav-item" id="navItemDeliveries" onclick="nav('deliveries',this)"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span><span>Deliveries</span></div>
-    <div class="nav-item" onclick="nav('customers',this)"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span>Customers</span></div>
-    <div class="nav-item" onclick="nav('import',this)"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span><span>Excel Import</span></div>
+    <div class="nav-item" onclick="nav('assign',this)"><span class="ni">🎯</span><span>Auto Assign</span></div>
+    <div class="nav-item" id="navItemDeliveries" onclick="nav('deliveries',this)"><span class="ni">📦</span><span>Deliveries</span></div>
+    <div class="nav-item" onclick="nav('customers',this)"><span class="ni">👥</span><span>Customers</span></div>
+    <div class="nav-item" onclick="nav('import',this)"><span class="ni">📊</span><span>Excel Import</span></div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Communication</div>
     <div class="nav-item" id="navItemInbox" onclick="nav('inbox',this)">
-      <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg></span><span>Customer Inbox</span>
+      <span class="ni">💬</span><span>Customer Inbox</span>
       <span class="nav-badge purple" id="inboxBadge" style="display:none">0</span>
     </div>
-    <div class="nav-item" onclick="nav('broadcast',this)"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span><span>Broadcast</span></div>
+    <div class="nav-item" onclick="nav('broadcast',this)"><span class="ni">📣</span><span>Broadcast</span></div>
     <div class="nav-item" id="navItemNobox" onclick="nav('nobox',this)">
-      <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg></span><span>No Box Requests</span>
+      <span class="ni">🚫</span><span>No Box Requests</span>
       <span class="nav-badge blue" id="noboxBadge" style="display:none">0</span>
     </div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Team</div>
-    <div class="nav-item" onclick="nav('agents',this)"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span>Agents</span></div>
-    <div class="nav-item" onclick="nav('history',this)"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M4 8v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg></span><span>History</span></div>
-    <div class="nav-item" id="navItemAnalytics" onclick="nav('analytics',this)"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span><span>Analytics</span></div>
-    <div class="nav-item" onclick="nav('reset',this)"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg></span><span>Daily Reset</span></div>
+    <div class="nav-item" onclick="nav('agents',this)"><span class="ni">👤</span><span>Agents</span></div>
+    <div class="nav-item" onclick="nav('history',this)"><span class="ni">🗂</span><span>History</span></div>
+    <div class="nav-item" id="navItemAnalytics" onclick="nav('analytics',this)"><span class="ni">📈</span><span>Analytics</span></div>
+    <div class="nav-item" onclick="nav('reset',this)"><span class="ni">🔄</span><span>Daily Reset</span></div>
   </div>
   <div class="sidebar-foot">
     <div class="admin-row">
@@ -100,7 +97,6 @@
 <!-- MAIN -->
 <div class="main">
   <div class="topbar">
- <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
     <div class="page-title" id="pageTitle">Dashboard</div>
     <div class="topbar-date" id="todayDate"></div>
 
@@ -259,6 +255,7 @@
             <select class="date-inp" id="custAgentFilter" onchange="renderCustomers()" style="width:150px">
               <option value="">All Agents</option>
             </select>
+            <button class="topbar-btn secondary" onclick="exportCustomersToExcel()">⬇ Export Excel</button>
             <button class="topbar-btn secondary" onclick="openM('addCustomerModal')">+ Add Customer</button>
           </div>
         </div>
@@ -511,6 +508,17 @@
             <button class="topbar-btn" onclick="loadHistory()">Load</button>
             <button class="topbar-btn purple-btn" onclick="nav('analytics', document.getElementById('navItemAnalytics'))">📈 Analytics</button>
           </div>
+          <div class="tc-controls" style="padding:0 18px 14px">
+            <select class="date-inp" id="histExportScope" onchange="onHistExportScopeChange()">
+              <option value="all">Export: All Time</option>
+              <option value="range">Export: Date Range</option>
+              <option value="month" selected>Export: Month</option>
+            </select>
+            <input type="date" class="date-inp" id="histExportStart" style="display:none" title="Start date">
+            <input type="date" class="date-inp" id="histExportEnd" style="display:none" title="End date">
+            <input type="month" class="date-inp" id="histExportMonth" style="display:inline-block">
+            <button class="topbar-btn secondary" onclick="exportHistoryToExcel()">⬇ Export Excel</button>
+          </div>
         </div>
         <div id="historySummary" style="display:none" class="history-summary">
           <div class="hist-stat"><div class="hist-num" id="hs_total" style="color:var(--accent)">0</div><div class="hist-lbl">Total</div></div>
@@ -535,63 +543,31 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <select class="date-inp" id="analyticsScope" onchange="onAnalyticsScopeChange()">
             <option value="all">All Time</option>
-            <option value="month">Specific Month</option>
-            <option value="range">Custom Range</option>
+            <option value="month" selected>Specific Month</option>
+            <option value="range">Date Range</option>
           </select>
           <input type="month" class="date-inp" id="analyticsMonthPicker" style="display:none" onchange="loadAnalytics()">
-          <span id="analyticsRangePicker" style="display:none;align-items:center;gap:6px">
-            <input type="date" class="date-inp" id="analyticsRangeFrom" onchange="loadAnalytics()">
-            <span style="color:var(--muted);font-size:12px">to</span>
-            <input type="date" class="date-inp" id="analyticsRangeTo" onchange="loadAnalytics()">
-          </span>
+          <input type="date" class="date-inp" id="analyticsRangeStart" style="display:none" onchange="loadAnalytics()" title="Start date">
+          <input type="date" class="date-inp" id="analyticsRangeEnd" style="display:none" onchange="loadAnalytics()" title="End date">
           <button class="topbar-btn secondary" onclick="loadAnalytics(true)">↻ Refresh</button>
+          <button class="topbar-btn secondary" onclick="exportAnalyticsToExcel()">⬇ Export Excel</button>
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-        <button class="f-btn on" id="atab-overview" onclick="analyticsTab('overview',this)">📊 Overview</button>
-        <button class="f-btn off" id="atab-customers" onclick="analyticsTab('customers',this)">👥 Customers</button>
+        <button class="f-btn on" id="atab-customers" onclick="analyticsTab('customers',this)">👥 Customers</button>
         <button class="f-btn off" id="atab-agents" onclick="analyticsTab('agents',this)">🚴 Agents</button>
       </div>
 
       <div id="analyticsLoading" style="display:none" class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Crunching delivery history…</div></div>
-
-      <!-- OVERVIEW (CHARTS) VIEW -->
-      <div id="analyticsOverviewView">
-        <div class="charts-grid">
-          <div class="tcard chart-card">
-            <div class="tcard-head">
-              <div class="tcard-title">📈 Weekly Completion Rate</div>
-              <div style="font-size:11px;color:var(--muted)" id="weeklyChartRange"></div>
-            </div>
-            <div class="chart-body">
-              <canvas id="weeklyTrendChart"></canvas>
-              <div class="chart-empty" id="weeklyTrendEmpty" style="display:none"><div class="empty-icon">🗂</div><div class="empty-text">No archived history yet — run "Archive &amp; Reset" at least once to see a trend here.</div></div>
-            </div>
-          </div>
-          <div class="tcard chart-card">
-            <div class="tcard-head">
-              <div class="tcard-title">🥯 Today's Status Breakdown</div>
-              <div style="font-size:11px;color:var(--muted)" id="statusChartTotal"></div>
-            </div>
-            <div class="chart-body">
-              <canvas id="statusBreakdownChart"></canvas>
-              <div class="chart-empty" id="statusBreakdownEmpty" style="display:none"><div class="empty-icon">📭</div><div class="empty-text">No deliveries scheduled for today yet.</div></div>
-            </div>
-          </div>
-          <div class="tcard chart-card" style="grid-column:1/-1">
-            <div class="tcard-head">
-              <div class="tcard-title">🏆 Agent Leaderboard <span style="font-weight:400;color:var(--muted);font-size:11px" id="agentLeaderboardScope"></span></div>
-            </div>
-            <div class="chart-body" style="min-height:220px">
-              <canvas id="agentLeaderboardChart"></canvas>
-              <div class="chart-empty" id="agentLeaderboardEmpty" style="display:none"><div class="empty-icon">👤</div><div class="empty-text">No agent activity in this period yet.</div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+                         <div class="tcard" style="padding:18px;margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div style="font-size:14px;font-weight:600">📈 Weekly Completion Rate</div>
+    <div style="font-size:11px;color:var(--muted)" id="weeklyChartRange"></div>
+  </div>
+  <canvas id="weeklyTrendChart" height="90"></canvas>
+</div>
       <!-- CUSTOMERS VIEW -->
-      <div id="analyticsCustomersView" style="display:none">
+      <div id="analyticsCustomersView">
         <div class="stat-grid" style="margin-bottom:16px">
           <div class="stat-card total"><div class="stat-num orange" id="an_totalCust">0</div><div class="stat-lbl">Customers Tracked</div></div>
           <div class="stat-card pending"><div class="stat-num amber" id="an_totalDelayedFlag">0</div><div class="stat-lbl" id="an_totalDelayedFlagLbl">Delay Flags (All Time)</div></div>
@@ -779,29 +755,6 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="confirmModal">
-  <div class="modal">
-    <div class="modal-h"><h3 id="confirmModalTitle">Please confirm</h3><span class="modal-cl" onclick="_confirmModalRespond(false)">✕</span></div>
-    <div class="modal-b">
-      <div id="confirmModalMsg" style="font-size:14px;line-height:1.6;color:var(--text)"></div>
-    </div>
-    <div class="modal-f"><button class="topbar-btn secondary" onclick="_confirmModalRespond(false)">Cancel</button><button class="topbar-btn" id="confirmModalBtn" onclick="_confirmModalRespond(true)">Confirm</button></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="credentialsModal">
-  <div class="modal">
-    <div class="modal-h"><h3>Agent Credentials</h3><span class="modal-cl" onclick="closeM('credentialsModal')">✕</span></div>
-    <div class="modal-b">
-      <div style="font-size:14px;font-weight:600;margin-bottom:10px">Share these login details with the agent</div>
-      <div class="info-box" style="margin-bottom:10px">Name: <strong id="credAgentName"></strong></div>
-      <div class="info-box" style="margin-bottom:10px">Email: <strong id="credAgentEmail"></strong></div>
-      <div class="info-box" style="margin-bottom:0">Password: <strong id="credAgentPass"></strong></div>
-    </div>
-    <div class="modal-f"><button class="topbar-btn secondary" onclick="copyAgentCredentials()">Copy Credentials</button><button class="topbar-btn" onclick="closeM('credentialsModal')">Close</button></div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="customerAnalyticsModal">
   <div class="modal">
     <div class="modal-h"><h3 id="caTitle">Customer</h3><span class="modal-cl" onclick="closeM('customerAnalyticsModal')">✕</span></div>
@@ -832,5 +785,6 @@
 <script src="project/js/broadcast.js"></script>
 <script src="project/js/history.js"></script>
 <script src="project/js/analytics.js"></script>
+<script src="project/js/export.js"></script>
 </body>
 </html>

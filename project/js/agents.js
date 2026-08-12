@@ -8,11 +8,22 @@ function loadAgents() {
     const docs = snap.docs.slice().sort((a, b) => (a.data().name || '').localeCompare(b.data().name || '', undefined, { numeric: true, sensitivity: 'base' }));
     docs.forEach(doc => {
       const d = doc.data(); count++;
-      agents[doc.id] = { name: d.name || '?', fcmToken: d.fcmToken || '', zone: d.zone || '', maxDeliveries: d.maxDeliveries || 999, email: d.email || '', phone: d.phone || '' };
+      agents[doc.id] = {
+        name: d.name || '?', fcmToken: d.fcmToken || '', zone: d.zone || '',
+        maxDeliveries: d.maxDeliveries || 999, email: d.email || '', phone: d.phone || '',
+        onDuty: d.onDuty === true, lastOnlineAt: d.lastOnlineAt || null, lastOfflineAt: d.lastOfflineAt || null
+      };
       const ini = (d.name || '?').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
       const tot = d.totalDeliveries || 0, dn = d.completedDeliveries || 0, pct = tot > 0 ? Math.round((dn * 100) / tot) : 0;
       if (d.zone) zones.add(d.zone.toLowerCase());
-      grid += `<div class="agent-card"><div class="ag-top"><div class="ag-av">${ini}</div><div><div class="ag-name">${d.name || '?'}</div><div class="ag-email">${d.email || ''}</div><div class="ag-email">Zone: ${d.zone || '—'}</div></div></div><div class="ag-stats"><div class="ag-stat"><div class="num" id="agTot_${doc.id}">${tot}</div><div class="lbl">Total</div></div><div class="ag-stat"><div class="num" id="agDone_${doc.id}">${dn}</div><div class="lbl">Done</div></div><div class="ag-stat"><div class="num" id="agRate_${doc.id}" style="color:var(--accent)">${pct}%</div><div class="lbl">Rate</div></div></div><div class="perf-bar"><div class="perf-fill" id="agBar_${doc.id}" style="width:${pct}%"></div></div><div class="perf-label" id="agPerfLbl_${doc.id}">Performance: ${pct}%</div>${d.email ? `<div class="cred-box">Login: <strong>${d.email}</strong></div>` : ''}<button class="topbar-btn secondary" style="width:100%;margin-top:10px;font-size:12px" onclick="openEditAgent('${doc.id}')">✏️ Edit Agent</button></div>`;
+
+      // ── On Duty / Off Duty pill — reflects the agent's last toggle in the app ──
+      const onDuty = d.onDuty === true;
+      const dutyTs = onDuty ? d.lastOnlineAt : d.lastOfflineAt;
+      const dutyTimeStr = dutyTs ? new Date(dutyTs).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+      const dutyPill = `<span class="badge ${onDuty ? 'badge-picked' : 'badge-read'}" style="margin-left:6px;font-size:9px;vertical-align:middle">${onDuty ? '🟢 On Duty' : '⚪ Off Duty'}${dutyTimeStr ? ' · ' + dutyTimeStr : ''}</span>`;
+
+      grid += `<div class="agent-card"><div class="ag-top"><div class="ag-av">${ini}</div><div><div class="ag-name">${d.name || '?'}${dutyPill}</div><div class="ag-email">${d.email || ''}</div><div class="ag-email">Zone: ${d.zone || '—'}</div></div></div><div class="ag-stats"><div class="ag-stat"><div class="num" id="agTot_${doc.id}">${tot}</div><div class="lbl">Total</div></div><div class="ag-stat"><div class="num" id="agDone_${doc.id}">${dn}</div><div class="lbl">Done</div></div><div class="ag-stat"><div class="num" id="agRate_${doc.id}" style="color:var(--accent)">${pct}%</div><div class="lbl">Rate</div></div></div><div class="perf-bar"><div class="perf-fill" id="agBar_${doc.id}" style="width:${pct}%"></div></div><div class="perf-label" id="agPerfLbl_${doc.id}">Performance: ${pct}%</div>${d.email ? `<div class="cred-box">Login: <strong>${d.email}</strong></div>` : ''}<button class="topbar-btn secondary" style="width:100%;margin-top:10px;font-size:12px" onclick="openEditAgent('${doc.id}')">✏️ Edit Agent</button></div>`;
       agOpts += `<option value="${doc.id}">${d.name || '?'}</option>`;
       uidRows += `<tr><td><strong>${d.name || '?'}</strong></td><td style="color:var(--muted)">${d.email || ''}</td><td style="color:var(--muted)">${d.zone || '—'}</td><td><code style="font-family:var(--mono);font-size:10px;cursor:pointer;color:var(--accent)" onclick="copyUID('${doc.id}')" title="Click to copy">${doc.id}</code></td></tr>`;
     });
@@ -32,7 +43,14 @@ function loadAgents() {
     const zSel = document.getElementById('broadcastZone');
     if (zSel) { zSel.innerHTML = '<option value="">Select Zone...</option>'; zones.forEach(z => zSel.innerHTML += `<option value="${z}">${z}</option>`); }
     renderAgentLoad();
-    loadHistoryCache().then(applyAgentPerfToCards).catch(() => {});
+    // NOTE: no longer auto-fetching full delivery history here. This used to call
+    // loadHistoryCache() -> collectionGroup('deliveries').get() on EVERY dashboard
+    // load (every login/refresh), unfiltered across your entire archive — the
+    // actual cause of the 300K-read spike. The "Total/Done/Rate" numbers on each
+    // agent card now only refresh with real all-time data after you visit the
+    // Analytics tab once per session (Analytics already calls applyAgentPerfToCards
+    // itself). Until then they show the raw totalDeliveries/completedDeliveries
+    // fields on the user doc, which is what the very first version of this app did.
   }).catch(e => toast('Could not load agents: ' + e.message, 'err'));
 }
 
@@ -68,30 +86,13 @@ function createAgent() {
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: em, password: pw, returnSecureToken: true }) })
     .then(r => r.json()).then(data => {
       if (data.error) throw new Error(data.error.message);
-      return db.collection('users').doc(data.localId).set({ userId: data.localId, name: n, phone: ph, email: em, role: 'delivery', zone: zn, maxDeliveries: mx, fcmToken: '', totalDeliveries: 0, completedDeliveries: 0, active: true });
+      return db.collection('users').doc(data.localId).set({ userId: data.localId, name: n, phone: ph, email: em, role: 'delivery', zone: zn, maxDeliveries: mx, fcmToken: '', totalDeliveries: 0, completedDeliveries: 0, active: true, onDuty: false });
     }).then(() => {
       btn.disabled = false; btn.textContent = 'Create Agent'; closeM('addAgentModal'); loadAgents();
-      showAgentCredentials(n, em, pw);
+      alert(`✅ Agent created!\n\nShare these login details with ${n}:\n\nEmail: ${em}\nPassword: ${pw}\n\nThey use these to login to the Android app.`);
       toast('Agent ' + n + ' created!', 'ok');
       ['aN', 'aPh', 'aEm', 'aPw', 'aZn'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     }).catch(e => { btn.disabled = false; btn.textContent = 'Create Agent'; let msg = e.message; if (msg.includes('EMAIL_EXISTS')) msg = 'Email already registered.'; toast('Failed: ' + msg, 'err'); });
-}
-
-let _lastAgentCreds=null;
-function showAgentCredentials(name,email,pass){
-  _lastAgentCreds={name,email,pass};
-  const nameEl = document.getElementById('credAgentName');
-  const emailEl = document.getElementById('credAgentEmail');
-  const passEl = document.getElementById('credAgentPass');
-  if (nameEl) nameEl.textContent=name;
-  if (emailEl) emailEl.textContent=email;
-  if (passEl) passEl.textContent=pass;
-  openM('credentialsModal');
-}
-function copyAgentCredentials(){
-  if(!_lastAgentCreds) return;
-  navigator.clipboard.writeText(`Email: ${_lastAgentCreds.email}\nPassword: ${_lastAgentCreds.pass}`)
-    .then(()=>toast('Credentials copied!','ok')).catch(()=>toast('Could not copy — select manually','err'));
 }
 
 function openEditAgent(uid) {

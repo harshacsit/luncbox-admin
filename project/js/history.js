@@ -114,9 +114,13 @@ async function archiveDeliveries(includeToday) {
 }
 async function triggerReset(auto) {
   auto = !!auto;
-  if (!auto && !confirm('Archive all current deliveries and clear the list for tomorrow?')) return;
   const btn = document.getElementById('btnReset');
-  if (btn) { btn.disabled = true; btn.textContent = 'Archiving...'; }
+  if (btn) btn.disabled = true;
+  if (!auto && !(await askConfirm('Archive all current deliveries and clear the list for tomorrow?', {title:'Daily Reset?', confirmLabel:'Archive & Reset', danger:true}))) {
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (btn) btn.textContent = 'Archiving...';
   try {
     const result = await archiveDeliveries(true); // true = archive everything, including today's
     await db.collection('config').doc('app').set({ lastAutoReset: today }, { merge: true }).catch(() => {});

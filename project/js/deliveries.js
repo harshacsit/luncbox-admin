@@ -1,7 +1,7 @@
 // ══ DELIVERIES MANAGEMENT ══
 
 function listenDeliveries() {
-  db.collection('deliveries').onSnapshot(snap => {
+  db.collection('deliveries').where('deliveryDate', '==', today).onSnapshot(snap => {
     allDeliveries = [];
     snap.forEach(doc => { const d = doc.data(); d.id = doc.id; allDeliveries.push(d); });
     allDeliveries.sort((a, b) => (a.pickupOrder || 999) - (b.pickupOrder || 999));
@@ -206,13 +206,13 @@ async function markAllDelivered() {
     d.deliveryDate === today && d.status !== 'Delivered'
   ).length;
 
-  if (count === 0) { toast('All deliveries already marked delivered', 'info'); return; }
+  const btn = document.getElementById('btnMarkAllDelivered');
+  if (btn) btn.disabled = true;
 
   const ok = await askConfirm('This updates all customer dashboards instantly.', {title:`Mark all ${count} remaining deliveries as Delivered?`, confirmLabel:'Mark Delivered'});
-  if (!ok) return;
+  if (!ok) { if (btn) btn.disabled = false; return; }
 
-  const btn = document.getElementById('btnMarkAllDelivered');
-  if (btn) { btn.disabled = true; btn.textContent = 'Updating...'; }
+  if (btn) btn.textContent = 'Updating...';
 
   try {
     let batch = db.batch();

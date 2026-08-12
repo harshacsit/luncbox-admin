@@ -3,7 +3,7 @@
 let allConvos = [];
 
 function listenInbox() {
-  db.collection('messages').orderBy('timestamp', 'desc').onSnapshot(snap => {
+  db.collection('messages').orderBy('timestamp', 'desc').limit(200).onSnapshot(snap => {
     const groups = {};
     snap.forEach(doc => {
       const m = doc.data(); m.id = doc.id;

@@ -1,7 +1,7 @@
 // ══ NO BOX REQUESTS MANAGEMENT ══
 
 function listenNoBox() {
-  db.collection('nobox_requests').orderBy('requestedAt', 'desc').onSnapshot(snap => {
+  db.collection('nobox_requests').orderBy('requestedAt', 'desc').limit(300).onSnapshot(snap => {
     const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const tomorrow2 = new Date(Date.now() + 86400000).toISOString().split('T')[0];
     const tomorrowCount = all.filter(r => r.date === tomorrow2).length;
@@ -21,8 +21,8 @@ function listenNoBox() {
 
 function loadNoBoxRequests() {
   const df = document.getElementById('noboxDateFilter')?.value;
-  let ref = db.collection('nobox_requests').orderBy('requestedAt', 'desc');
-  if (df) ref = db.collection('nobox_requests').where('date', '==', df);
+  let ref = db.collection('nobox_requests').orderBy('requestedAt', 'desc').limit(500);
+  if (df) ref = db.collection('nobox_requests').where('date', '==', df).limit(500);
   ref.get().then(snap => {
     const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const body = document.getElementById('noboxBody');

@@ -16,8 +16,12 @@ const panelTitles = {
   reset: 'Daily Reset'
 };
 
+let _activeConfirmResolve = null;
+
 function nav(id, el) {
-   toggleSidebar(false);
+  if (_activeConfirmResolve) {
+    _activeConfirmResolve(false);
+  }
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const targetPanel = document.getElementById('panel-' + id);
@@ -35,7 +39,7 @@ function nav(id, el) {
   if (id === 'nobox') loadNoBoxRequests();
   if (id === 'broadcast') loadBroadcastLog();
   if (id === 'reset') loadGlobalPin();
-  if (id === 'analytics') { if (!analyticsLoaded) loadAnalytics(); else refreshAnalyticsCharts(); }
+  if (id === 'analytics' && !analyticsLoaded) onAnalyticsScopeChange();
 }
 
 function openM(id) {
@@ -46,21 +50,6 @@ function openM(id) {
 function closeM(id) {
   const el = document.getElementById(id);
   if (el) el.classList.remove('open');
-}
-let _confirmResolve=null;
-function askConfirm(message, opts={}){
-  const {title='Please confirm', confirmLabel='Confirm', danger=false}=opts;
-  document.getElementById('confirmModalTitle').textContent=title;
-  document.getElementById('confirmModalMsg').textContent=message;
-  const btn=document.getElementById('confirmModalBtn');
-  btn.textContent=confirmLabel;
-  btn.style.background = danger ? 'var(--red)' : '';
-  openM('confirmModal');
-  return new Promise(resolve=>{ _confirmResolve=resolve; });
-}
-function _confirmModalRespond(result){
-  closeM('confirmModal');
-  if(_confirmResolve){ _confirmResolve(result); _confirmResolve=null; }
 }
 
 function gv(id) {
@@ -85,6 +74,84 @@ function toast(msg, type) {
   _tt = setTimeout(() => el.classList.remove('show'), 4000);
 }
 
+// Global Promise-based Confirmation Modal
+function askConfirm(message, options = {}) {
+  if (_activeConfirmResolve) {
+    _activeConfirmResolve(false);
+  }
+
+  return new Promise(resolve => {
+    let overlay = document.getElementById('globalConfirmModal');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.id = 'globalConfirmModal';
+      overlay.style.zIndex = '10000';
+      overlay.innerHTML = `
+        <div class="modal" style="max-width:440px">
+          <div class="modal-h">
+            <h3 id="globalConfirmTitle">Confirm</h3>
+            <span class="modal-cl" id="globalConfirmClose">✕</span>
+          </div>
+          <div class="modal-b" style="font-size:13px;line-height:1.6;white-space:pre-line;color:var(--text)" id="globalConfirmMsg"></div>
+          <div class="modal-f">
+            <button class="topbar-btn secondary" id="globalConfirmCancel">Cancel</button>
+            <button class="topbar-btn" id="globalConfirmOk">Confirm</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    }
+
+    const titleEl = document.getElementById('globalConfirmTitle');
+    const msgEl = document.getElementById('globalConfirmMsg');
+    const okBtn = document.getElementById('globalConfirmOk');
+    const cancelBtn = document.getElementById('globalConfirmCancel');
+    const closeBtn = document.getElementById('globalConfirmClose');
+
+    if (titleEl) titleEl.textContent = options.title || 'Confirm Action';
+    if (msgEl) msgEl.textContent = message || '';
+    if (okBtn) {
+      okBtn.textContent = options.confirmLabel || 'Confirm';
+      if (options.danger) {
+        okBtn.style.background = 'var(--red)';
+        okBtn.style.color = '#fff';
+      } else {
+        okBtn.style.background = 'var(--accent)';
+        okBtn.style.color = '#fff';
+      }
+    }
+    if (cancelBtn) cancelBtn.textContent = options.cancelLabel || 'Cancel';
+
+    const cleanup = (val) => {
+      overlay.classList.remove('open');
+      document.removeEventListener('keydown', onKeyDown);
+      if (okBtn) okBtn.onclick = null;
+      if (cancelBtn) cancelBtn.onclick = null;
+      if (closeBtn) closeBtn.onclick = null;
+      overlay.onclick = null;
+      _activeConfirmResolve = null;
+      resolve(val);
+    };
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') cleanup(false);
+    };
+
+    _activeConfirmResolve = cleanup;
+
+    if (okBtn) okBtn.onclick = () => cleanup(true);
+    if (cancelBtn) cancelBtn.onclick = () => cleanup(false);
+    if (closeBtn) closeBtn.onclick = () => cleanup(false);
+    overlay.onclick = (e) => {
+      if (e.target === overlay) cleanup(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+
+    overlay.classList.add('open');
+  });
+}
+
 // Attach modal overlay click-outside listeners
 document.addEventListener('DOMContentLoaded', () => {
   const dateEl = document.getElementById('todayDate');
@@ -93,31 +160,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   const ovDateEl = document.getElementById('ov_date');
   if (ovDateEl) ovDateEl.textContent = today;
-document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{
-  if(e.target===m){
-    m.classList.remove('open');
-    if(m.id==='confirmModal' && _confirmResolve){ _confirmResolve(false); _confirmResolve=null; }
-  }
-}));
+
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => {
+      if (e.target === m) m.classList.remove('open');
+    });
+  });
 });
-function toggleSidebar(force){
-  const shell = document.querySelector('.shell');
-  const sb = document.getElementById('sidebar');
-  const ov = document.getElementById('sidebarOverlay');
-  if(!sb) return;
-
-  const isMobile = window.matchMedia('(max-width:768px)').matches;
-
-  if (isMobile) {
-    const show = typeof force === 'boolean' ? force : !sb.classList.contains('open');
-    sb.classList.toggle('open', show);
-    if(ov) ov.classList.toggle('show', show);
-    return;
-  }
-
-  if (!shell) return;
-  const shouldCollapse = typeof force === 'boolean' ? force : !shell.classList.contains('sidebar-collapsed');
-  shell.classList.toggle('sidebar-collapsed', shouldCollapse);
-  sb.classList.remove('open');
-  if(ov) ov.classList.remove('show');
-}

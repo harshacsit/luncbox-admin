@@ -19,9 +19,13 @@ async function previewAssign() {
 async function runAssign(auto) {
   auto = !!auto;
   if (!Object.keys(agents).length) { if (!auto) toast('No agents found', 'err'); return; }
-  if (!auto && !(await askConfirm('Assign today\'s deliveries to all agents?', {title:'Assign Today\'s Routes?', confirmLabel:'Assign', danger:false}))) return;
   const btn = document.querySelector('#panel-assign .topbar-btn.green-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Working...'; }
+  if (btn) btn.disabled = true;
+  if (!auto && !(await askConfirm('Assign today\'s deliveries to all agents?', {title:'Assign Today\'s Routes?', confirmLabel:'Assign', danger:false}))) {
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (btn) btn.textContent = 'Working...';
   const progEl = document.getElementById('assignProgress');
   const barEl = document.getElementById('assignBar');
   const statusEl = document.getElementById('assignStatus');
