@@ -38,6 +38,7 @@ function loadAgents() {
     Object.entries(agents).forEach(([uid, a]) => agFilt += `<option value="${uid}">${a.name}</option>`);
     const af = document.getElementById('agentFilter'); if (af) af.innerHTML = agFilt;
     const caf = document.getElementById('custAgentFilter'); if (caf) caf.innerHTML = agFilt;
+    const haf = document.getElementById('histAgentFilter'); if (haf) haf.innerHTML = agFilt;
     const aac = document.getElementById('activeAgentCount'); if (aac) aac.textContent = count + ' agent' + (count !== 1 ? 's' : '');
     
     const zSel = document.getElementById('broadcastZone');

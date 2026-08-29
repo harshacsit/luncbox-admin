@@ -3,11 +3,12 @@
 async function loadHistory() {
   const dt = document.getElementById('histDate')?.value;
   if (!dt) { toast('Select a date first', 'err'); return; }
+  const agF = document.getElementById('histAgentFilter')?.value || '';
   const body = document.getElementById('histBody');
   if (body) body.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-text">Loading...</div></td></tr>';
   const summaryEl = document.getElementById('historySummary');
   if (summaryEl) summaryEl.style.display = 'none';
-  
+
   const summSnap = await db.doc('history/' + dt + '/summary/stats').get().catch(() => null);
   if (summSnap && summSnap.exists) {
     const s = summSnap.data();
@@ -17,19 +18,39 @@ async function loadHistory() {
     const rateEl = document.getElementById('hs_rate'); if (rateEl) rateEl.textContent = (s.completionRate || 0) + '%';
     if (summaryEl) summaryEl.style.display = 'grid';
   }
-  
-  let snap = await db.collection('history/' + dt + '/deliveries').orderBy('pickupOrder', 'asc').get().catch(() => db.collection('history/' + dt + '/deliveries').get());
+
+  const snap = await db.collection('history/' + dt + '/deliveries').get().catch(() => null);
   if (!body) return;
   if (!snap || snap.empty) { body.innerHTML = `<tr><td colspan="6" class="empty-state"><div class="empty-icon">🗂</div><div class="empty-text">No deliveries archived for ${dt}</div></td></tr>`; return; }
+
+  let docs = snap.docs.map(doc => doc.data());
+  if (agF) docs = docs.filter(d => d.assignedTo === agF);
+  if (!docs.length) { body.innerHTML = `<tr><td colspan="6" class="empty-state"><div class="empty-icon">🗂</div><div class="empty-text">No deliveries for this agent on ${dt}</div></td></tr>`; return; }
+
+  // Agent-wise sort: when "All Agents" is selected, group by agent name
+  // (then by pickup order within each agent) so one agent's stops read
+  // together instead of interleaved by write order.
+  docs.sort((a, b) => {
+    const an = (agents[a.assignedTo]?.name || a.assignedName || '~Unassigned').toLowerCase();
+    const bn = (agents[b.assignedTo]?.name || b.assignedName || '~Unassigned').toLowerCase();
+    if (an !== bn) return an.localeCompare(bn);
+    return (a.pickupOrder || 9999) - (b.pickupOrder || 9999);
+  });
+
   const sc = { Delivered: 'badge-delivered', Picked: 'badge-picked', Delayed: 'badge-delayed', Pending: 'badge-pending' };
-  let i = 0;
-  body.innerHTML = [...snap.docs].map(doc => {
-    const d = doc.data(); i++;
-    const ag = agents[d.assignedTo]?.name || d.assignedName || '?';
+  let i = 0, lastAgent = null;
+  body.innerHTML = docs.map(d => {
+    i++;
+    const ag = agents[d.assignedTo]?.name || d.assignedName || 'Unassigned';
     const pickTime = d.pickedAt || d.timestamp;
     const t = pickTime ? new Date(pickTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—';
     const delayedTag = (d.wasDelayed && d.status !== 'Delayed') ? '<span class="badge badge-delayed" style="margin-left:5px" title="This delivery was marked Delayed earlier that day">⚠ Was Delayed</span>' : '';
-    return `<tr><td style="color:var(--muted)">${i}</td><td><strong>${d.customerName || '—'}</strong></td><td style="font-family:var(--mono);font-size:12px;color:var(--blue)">${d.customerPhone || '—'}</td><td>${ag}</td><td><span class="badge ${sc[d.status] || 'badge-pending'}">${d.status}</span>${delayedTag}</td><td style="color:var(--muted);font-size:12px">${t}</td></tr>`;
+    let groupRow = '';
+    if (!agF && ag !== lastAgent) {
+      groupRow = `<tr><td colspan="6" style="background:var(--bg);font-weight:700;font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;padding:8px 16px">${ag}</td></tr>`;
+      lastAgent = ag;
+    }
+    return groupRow + `<tr><td style="color:var(--muted)">${i}</td><td><strong>${d.customerName || '—'}</strong></td><td style="font-family:var(--mono);font-size:12px;color:var(--blue)">${d.customerPhone || '—'}</td><td>${ag}</td><td><span class="badge ${sc[d.status] || 'badge-pending'}">${d.status}</span>${delayedTag}</td><td style="color:var(--muted);font-size:12px">${t}</td></tr>`;
   }).join('');
 }
 
@@ -113,10 +134,10 @@ async function archiveDeliveries(includeToday) {
   return { archivedDates, archivedCount };
 }
 async function triggerReset(auto) {
-  auto = !!auto;
+  if (auto) return; // All automatic daily resets have been stopped
   const btn = document.getElementById('btnReset');
   if (btn) btn.disabled = true;
-  if (!auto && !(await askConfirm('Archive all current deliveries and clear the list for tomorrow?', {title:'Daily Reset?', confirmLabel:'Archive & Reset', danger:true}))) {
+  if (!(await askConfirm('Archive all current deliveries and clear the list for tomorrow?', {title:'Daily Reset?', confirmLabel:'Archive & Reset', danger:true}))) {
     if (btn) btn.disabled = false;
     return;
   }

@@ -43,7 +43,7 @@ function pauseCustomer(id) {
 async function deleteCustomer(id, name) {
   const ok = await askConfirm(
     `This only removes them from future Auto Assign. Their past deliveries and history stay archived and are never deleted.`,
-    {title:`Delete ${name||'this customer'}?`, confirmLabel:'Delete', danger:true}
+    { title: `Delete ${name || 'this customer'}?`, confirmLabel: 'Delete', danger: true }
   );
   if (!ok) return;
   db.collection('customers').doc(id).delete()
@@ -82,7 +82,7 @@ async function addCustomer() {
   const owner = await findBoxIdOwner(bx, null);
   if (owner) { toast(`Box ID ${bx} is already allotted to ${owner.name}${owner.active ? '' : ' (paused)'}`, 'err'); return; }
   db.collection('customers').add({ name: n, phone: ph, boxId: bx, pickupLocation: pk, deliveryAddress: ad, zone: zn, assignedAgent: ag, notes: no, itemCount: 1, active: true, createdAt: Date.now() })
-    .then(() => { closeM('addCustomerModal'); loadCustomers(); toast('Customer added!', 'ok'); ['cN', 'cPh', 'cBx', 'cPk', 'cAd', 'cZn', 'cNo'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); })
+    .then(() => { closeM('addCustomerModal'); loadCustomers(); toast('Customer added!', 'ok');['cN', 'cPh', 'cBx', 'cPk', 'cAd', 'cZn', 'cNo'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); })
     .catch(e => toast('Error: ' + e.message, 'err'));
 }
 

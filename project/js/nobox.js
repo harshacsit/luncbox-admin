@@ -16,7 +16,7 @@ function listenNoBox() {
     if (nb_t) nb_t.textContent = tomorrowCount;
     if (nb_td) nb_td.textContent = todayCount;
     if (nb_tot) nb_tot.textContent = all.length;
-  }, () => {});
+  }, () => { });
 }
 
 function loadNoBoxRequests() {
@@ -34,5 +34,5 @@ function loadNoBoxRequests() {
         return `<tr class="${isTomorrow ? 'row-nobox' : ''}"><td style="color:var(--muted)">${i + 1}</td><td><strong>${r.customerName || '—'}</strong></td><td style="font-family:var(--mono);font-size:12px;color:var(--blue)">${r.customerPhone || '—'}</td><td style="font-family:var(--mono);font-size:12px">${r.date || '—'}</td><td style="font-size:11px;color:var(--muted)">${t}</td><td><span class="badge ${isTomorrow ? 'badge-nobox' : 'badge-pending'}">${isTomorrow ? 'Tomorrow' : r.date === today ? 'Today' : 'Past'}</span></td></tr>`;
       }).join('')
       : '<tr><td colspan="6" class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">No no-box requests</div></td></tr>';
-  }).catch(() => {});
+  }).catch(() => { });
 }

@@ -31,7 +31,10 @@ let historyCache = null;
 async function loadHistoryCache(force) {
   if (historyCache && !force) return historyCache;
   const snap = await db.collectionGroup('deliveries').get();
-  historyCache = snap.docs.map(d => d.data());
+  // Filters out today's still-live /deliveries docs (collectionGroup also
+  // matches the root collection by name) — only archived docs (which always
+  // carry archiveDate) belong in Analytics.
+  historyCache = snap.docs.map(d => d.data()).filter(d => !!d.archiveDate);
   return historyCache;
 }
 
@@ -65,6 +68,9 @@ async function loadAnalytics(forceRefresh) {
     const ok = await askConfirm('This reads your ENTIRE delivery history in one query and can be a large number of Firestore reads.\n\nContinue? (Tip: "Specific Month" or "Date Range" are much cheaper and usually enough.)', {title:'Confirm Large Scan', confirmLabel:'Continue', danger:false});
     if (!ok) return;
   }
+
+  const errBox = document.getElementById('analyticsErrorBox');
+  if (errBox) errBox.style.display = 'none';
 
   const loadingEl = document.getElementById('analyticsLoading');
   if (loadingEl) loadingEl.style.display = 'block';
@@ -171,7 +177,24 @@ async function loadAnalytics(forceRefresh) {
 
     analyticsLoaded = true;
   } catch (e) {
-    toast('Analytics load failed: ' + e.message, 'err');
+    console.error("Analytics load error:", e);
+    const errBox = document.getElementById('analyticsErrorBox');
+    const urlMatch = e.message && e.message.match(/https:\/\/console\.firebase\.google\.com[^\s]+/);
+    if (urlMatch && errBox) {
+      const link = urlMatch[0];
+      errBox.style.display = 'block';
+      errBox.innerHTML = `⚠️ <strong>Firestore Index Required</strong><br>
+      This query requires a Collection Group index on <code>deliveries</code> for <code>archiveDate</code>.<br>
+      <a href="${link}" target="_blank" style="display:inline-block;margin-top:8px;padding:6px 14px;background:var(--accent);color:#fff;border-radius:6px;text-decoration:none;font-weight:600">👉 Click Here to Create Index in Firebase Console</a><br>
+      <span style="font-size:11px;opacity:0.8;margin-top:6px;display:block">After creating the index, wait 1–2 minutes for Firebase to build it, then click "Refresh".</span>`;
+      toast('Firestore index required! Click the link banner above.', 'err');
+    } else {
+      if (errBox) {
+        errBox.style.display = 'block';
+        errBox.innerHTML = `⚠️ <strong>Analytics Load Failed</strong><br>${e.message}`;
+      }
+      toast('Analytics load failed: ' + e.message, 'err');
+    }
   }
   if (loadingEl) loadingEl.style.display = 'none';
   loadWeeklyTrend();

@@ -1,790 +1,1225 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lunchbox Command — Admin v2</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="project/css/admin.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%B1%3C/text%3E%3C/svg%3E">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lunchbox Command — Admin v2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="project/css/admin.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%B1%3C/text%3E%3C/svg%3E">
 </head>
+
 <body>
 
-<!-- ═══════════════════ LOGIN SCREEN ═══════════════════ -->
-<div class="app-screen active" id="screen-login">
-  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F3F4F7;font-family:'DM Sans',sans-serif">
-    <div style="background:#FFFFFF;border:1px solid #E3E5EA;border-radius:16px;padding:40px;width:360px;box-shadow:0 4px 24px rgba(16,24,40,.08)">
-      <div style="text-align:center;margin-bottom:28px">
-        <div style="font-size:40px;margin-bottom:10px">🍱</div>
-        <div style="font-size:20px;font-weight:700;color:#1A1D23">Lunchbox Admin</div>
-        <div style="font-size:13px;color:#6B7280;margin-top:4px">Sign in to continue</div>
-      </div>
-      <div style="margin-bottom:14px">
-        <label for="loginEmail" style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px">Email</label>
-        <input id="loginEmail" type="email" style="width:100%;background:#F8F9FB;border:1px solid #E3E5EA;border-radius:10px;padding:10px 14px;font-size:13px;color:#1A1D23;outline:none;font-family:inherit" placeholder="admin@lunchbox.com">
-      </div>
-      <div style="margin-bottom:20px">
-        <label for="loginPass" style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px">Password</label>
-        <input id="loginPass" type="password" style="width:100%;background:#F8F9FB;border:1px solid #E3E5EA;border-radius:10px;padding:10px 14px;font-size:13px;color:#1A1D23;outline:none;font-family:inherit" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <button onclick="doLogin()" style="width:100%;background:#E65100;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Sign In</button>
-      <div id="loginErr" style="color:#DC2626;font-size:12px;text-align:center;margin-top:10px;min-height:18px"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════ DASHBOARD SCREEN ═══════════════════ -->
-<div class="app-screen" id="screen-dashboard">
-<div class="shell">
-
-<!-- SIDEBAR -->
-<div class="sidebar">
-  <div class="brand">
-    <div class="brand-mark">
-      <div class="brand-icon">🍱</div>
-      <div><div class="brand-name">Lunchbox</div><div class="brand-sub">Command Centre</div></div>
-    </div>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">Overview</div>
-    <div class="nav-item active" onclick="nav('overview',this)"><span class="ni">◈</span><span>Dashboard</span></div>
-    <div class="nav-item" onclick="nav('delayed',this)">
-      <span class="ni">⚡</span><span>Delayed</span>
-      <span class="nav-badge" id="delayedBadge" style="display:none">0</span>
-    </div>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">Operations</div>
-    <div class="nav-item" onclick="nav('assign',this)"><span class="ni">🎯</span><span>Auto Assign</span></div>
-    <div class="nav-item" id="navItemDeliveries" onclick="nav('deliveries',this)"><span class="ni">📦</span><span>Deliveries</span></div>
-    <div class="nav-item" onclick="nav('customers',this)"><span class="ni">👥</span><span>Customers</span></div>
-    <div class="nav-item" onclick="nav('import',this)"><span class="ni">📊</span><span>Excel Import</span></div>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">Communication</div>
-    <div class="nav-item" id="navItemInbox" onclick="nav('inbox',this)">
-      <span class="ni">💬</span><span>Customer Inbox</span>
-      <span class="nav-badge purple" id="inboxBadge" style="display:none">0</span>
-    </div>
-    <div class="nav-item" onclick="nav('broadcast',this)"><span class="ni">📣</span><span>Broadcast</span></div>
-    <div class="nav-item" id="navItemNobox" onclick="nav('nobox',this)">
-      <span class="ni">🚫</span><span>No Box Requests</span>
-      <span class="nav-badge blue" id="noboxBadge" style="display:none">0</span>
-    </div>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">Team</div>
-    <div class="nav-item" onclick="nav('agents',this)"><span class="ni">👤</span><span>Agents</span></div>
-    <div class="nav-item" onclick="nav('history',this)"><span class="ni">🗂</span><span>History</span></div>
-    <div class="nav-item" id="navItemAnalytics" onclick="nav('analytics',this)"><span class="ni">📈</span><span>Analytics</span></div>
-    <div class="nav-item" onclick="nav('reset',this)"><span class="ni">🔄</span><span>Daily Reset</span></div>
-  </div>
-  <div class="sidebar-foot">
-    <div class="admin-row">
-      <div class="admin-av" id="adminAv">A</div>
-      <div><div class="admin-name" id="adminName">Admin</div><div class="admin-role">Manager</div></div>
-    </div>
-    <span class="logout-link" onclick="doLogout()">Sign out</span>
-  </div>
-</div>
-
-<!-- MAIN -->
-<div class="main">
-  <div class="topbar">
-    <div class="page-title" id="pageTitle">Dashboard</div>
-    <div class="topbar-date" id="todayDate"></div>
-
-    <div class="live-pill"><div class="live-dot"></div>Live</div>
-    
-<button class="topbar-btn green-btn" id="btnMarkAllDelivered" onclick="markAllDelivered()" 
-  style="font-size:11px;padding:6px 14px">
-  ✅ Mark All Delivered
-</button>
-  </div>
-  <div class="content">
-
-    <!-- OVERVIEW -->
-    <div class="panel active" id="panel-overview">
-      <div class="stat-grid">
-        <div class="stat-card total clickable" id="card_ALL" onclick="goToFiltered('ALL')" title="View all today's deliveries"><div class="stat-num orange" id="ov_total">0</div><div class="stat-lbl">Total Today</div><div class="stat-sub" id="ov_date"></div></div>
-        <div class="stat-card pending clickable" id="card_Pending" onclick="goToFiltered('Pending')" title="View pending deliveries"><div class="stat-num amber" id="ov_pending">0</div><div class="stat-lbl">Pending</div><div class="stat-sub">Awaiting pickup</div></div>
-        <div class="stat-card done clickable" id="card_DONE" onclick="goToFiltered('DONE')" title="View completed deliveries"><div class="stat-num green" id="ov_done">0</div><div class="stat-lbl">Completed</div><div class="stat-sub">Picked + Delivered</div></div>
-        <div class="stat-card delayed clickable" id="card_Delayed" onclick="goToFiltered('Delayed')" title="View delayed deliveries"><div class="stat-num red" id="ov_delayed">0</div><div class="stat-lbl">Delayed</div><div class="stat-sub" id="ov_delayedSub">All clear</div></div>
-        <div class="stat-card nobox clickable" id="card_NoBox" onclick="goToFiltered('NoBox')" title="View no-box deliveries today"><div class="stat-num teal" id="ov_noboxtoday">0</div><div class="stat-lbl">No Box Today</div><div class="stat-sub">Marked no box</div></div>
-      </div>
-      <div class="stat-grid" style="margin-bottom:20px">
-        <div class="stat-card msgs clickable" id="card_msgs" onclick="nav('inbox',document.getElementById('navItemInbox'))" title="Open customer inbox"><div class="stat-num purple" id="ov_msgs">0</div><div class="stat-lbl">Unread Messages</div><div class="stat-sub">From customers</div></div>
-        <div class="stat-card nobox clickable" id="card_noboxtomorrow" onclick="nav('nobox',document.getElementById('navItemNobox'))" title="View no-box requests"><div class="stat-num teal" id="ov_nobox">0</div><div class="stat-lbl">No Box Tomorrow</div><div class="stat-sub">Opt-outs for next day</div></div>
-      </div>
-
-      <div class="progress-row">
-        <div class="progress-label">Completion</div>
-        <div class="progress-track"><div class="progress-fill" id="progressBar" style="width:0%"></div></div>
-        <div class="progress-pct" id="progressPct" style="color:var(--green)">0%</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div class="tcard">
-          <div class="tcard-head"><div class="tcard-title">Agent Load Today</div></div>
-          <div class="agent-mini-grid" id="agentLoadGrid" style="padding:14px"></div>
+  <!-- ═══════════════════ LOGIN SCREEN ═══════════════════ -->
+  <div class="app-screen active" id="screen-login">
+    <div
+      style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F3F4F7;font-family:'DM Sans',sans-serif">
+      <div
+        style="background:#FFFFFF;border:1px solid #E3E5EA;border-radius:16px;padding:40px;width:360px;box-shadow:0 4px 24px rgba(16,24,40,.08)">
+        <div style="text-align:center;margin-bottom:28px">
+          <div style="font-size:40px;margin-bottom:10px">🍱</div>
+          <div style="font-size:20px;font-weight:700;color:#1A1D23">Lunchbox Admin</div>
+          <div style="font-size:13px;color:#6B7280;margin-top:4px">Sign in to continue</div>
         </div>
-        <div class="tcard">
-          <div class="tcard-head">
-            <div class="tcard-title">Recent Activity</div>
-            <button class="topbar-btn secondary" style="font-size:11px" onclick="nav('inbox',document.getElementById('navItemInbox'))">View Inbox</button>
-          </div>
-          <div id="recentActivity"></div>
+        <div style="margin-bottom:14px">
+          <label for="loginEmail"
+            style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px">Email</label>
+          <input id="loginEmail" type="email"
+            style="width:100%;background:#F8F9FB;border:1px solid #E3E5EA;border-radius:10px;padding:10px 14px;font-size:13px;color:#1A1D23;outline:none;font-family:inherit"
+            placeholder="admin@lunchbox.com">
         </div>
+        <div style="margin-bottom:20px">
+          <label for="loginPass"
+            style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px">Password</label>
+          <input id="loginPass" type="password"
+            style="width:100%;background:#F8F9FB;border:1px solid #E3E5EA;border-radius:10px;padding:10px 14px;font-size:13px;color:#1A1D23;outline:none;font-family:inherit"
+            placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <button onclick="doLogin()"
+          style="width:100%;background:#E65100;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Sign
+          In</button>
+        <div id="loginErr" style="color:#DC2626;font-size:12px;text-align:center;margin-top:10px;min-height:18px"></div>
       </div>
     </div>
+  </div>
 
-    <!-- DELAYED -->
-    <div class="panel" id="panel-delayed">
-      <div style="background:var(--redbg);border:1px solid var(--red);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
-        <span style="font-size:22px">⚡</span>
-        <div>
-          <div style="font-weight:700;color:var(--red);font-size:14px">Delayed Deliveries — Act Now</div>
-          <div style="font-size:12px;color:var(--muted)" id="delayedInfo">Real-time delayed list</div>
-        </div>
-      </div>
-      <div class="tcard">
-        <div style="overflow-x:auto"><table>
-          <thead><tr><th>#</th><th>Box ID</th><th>Customer</th><th>Phone</th><th>Current Agent</th><th>Pickup Location</th><th>Reassign To</th></tr></thead>
-          <tbody id="delayedBody"></tbody>
-        </table></div>
-      </div>
-    </div>
+  <!-- ═══════════════════ DASHBOARD SCREEN ═══════════════════ -->
+  <div class="app-screen" id="screen-dashboard">
+    <div class="shell">
 
-    <!-- AUTO ASSIGN -->
-    <div class="panel" id="panel-assign">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-        <div class="tcard" style="padding:20px">
-          <div style="font-size:15px;font-weight:600;margin-bottom:6px">Assign Today's Routes</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.7">
-            Reads all active customers → assigns to agents by zone → agents see deliveries in the app instantly.<br><br>
-            <span style="color:var(--amber);font-weight:600">Run every morning before agents start work.</span>
-          </div>
-          <button class="topbar-btn green-btn" onclick="runAssign()" style="width:100%;padding:10px;font-size:13px;margin-bottom:8px">🚀 Assign Today's Routes</button>
-          <button class="topbar-btn secondary" onclick="previewAssign()" style="width:100%;font-size:12px">👁 Preview (no changes)</button>
-          <div id="assignProgress" style="display:none;margin-top:10px">
-            <div class="progress-import"><div class="progress-import-fill" id="assignBar" style="width:0%"></div></div>
-            <div id="assignStatus" style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px"></div>
-          </div>
-        </div>
-        <div class="tcard" style="padding:20px">
-          <div style="font-size:15px;font-weight:600;margin-bottom:10px">Today's Numbers</div>
-          <div style="padding:10px;background:var(--bg);border-radius:8px;font-size:13px;margin-bottom:10px">
-            Active customers: <span id="activeCustomerCount" style="color:var(--green);font-weight:700">loading...</span><br>
-            Active agents: <span id="activeAgentCount" style="color:var(--accent);font-weight:700">loading...</span>
-          </div>
-          <details style="font-size:12px;color:var(--muted)">
-            <summary style="cursor:pointer;font-weight:600;color:var(--text)">How assignment works</summary>
-            <div style="line-height:2.1;margin-top:8px">
-              1. Customers with a preferred agent → assigned first<br>
-              2. Zone match → customer zone = agent zone<br>
-              3. Load balance → fewest deliveries gets next<br>
-              4. Pickup order → sorted alphabetically<br>
-              5. Status set to <span style="color:var(--amber);font-weight:600">Pending</span> automatically
-            </div>
-          </details>
-        </div>
-      </div>
-      <div class="tcard">
-        <div class="tcard-head"><div class="tcard-title">Assignment Preview</div></div>
-        <div class="assign-preview" id="assignPreview" style="padding:14px">
-          <div class="empty-state" style="grid-column:1/-1">Click "Preview" to see how customers will be distributed</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- DELIVERIES -->
-    <div class="panel" id="panel-deliveries">
-      <div class="stat-grid" style="margin-bottom:16px">
-        <div class="stat-card total clickable" id="dlcard_ALL" onclick="applyDeliveryFilter('ALL')"><div class="stat-num orange" id="dl_total">0</div><div class="stat-lbl">Total</div></div>
-        <div class="stat-card pending clickable" id="dlcard_Pending" onclick="applyDeliveryFilter('Pending')"><div class="stat-num amber" id="dl_pending">0</div><div class="stat-lbl">Pending</div></div>
-        <div class="stat-card done clickable" id="dlcard_DONE" onclick="applyDeliveryFilter('DONE')"><div class="stat-num green" id="dl_done">0</div><div class="stat-lbl">Completed</div></div>
-        <div class="stat-card delayed clickable" id="dlcard_Delayed" onclick="applyDeliveryFilter('Delayed')"><div class="stat-num red" id="dl_delayed">0</div><div class="stat-lbl">Delayed</div></div>
-        <div class="stat-card nobox clickable" id="dlcard_NoBox" onclick="applyDeliveryFilter('NoBox')"><div class="stat-num teal" id="dl_nobox">0</div><div class="stat-lbl">No Box</div></div>
-      </div>
-      <div class="tcard">
-        <div class="tcard-head">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <div class="tcard-title">Deliveries</div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <button class="f-btn on" data-status="ALL" onclick="applyDeliveryFilter('ALL')">All</button>
-              <button class="f-btn off" data-status="Pending" onclick="applyDeliveryFilter('Pending')">Pending</button>
-              <button class="f-btn off" data-status="Picked" onclick="applyDeliveryFilter('Picked')">Picked</button>
-              <button class="f-btn off red" data-status="Delayed" onclick="applyDeliveryFilter('Delayed')">Delayed</button>
-              <button class="f-btn off" data-status="Delivered" onclick="applyDeliveryFilter('Delivered')">Delivered</button>
-              <button class="f-btn off purple" data-status="NoBox" onclick="applyDeliveryFilter('NoBox')">No Box</button>
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">
+            <div class="brand-icon">🍱</div>
+            <div>
+              <div class="brand-name">Lunchbox</div>
+              <div class="brand-sub">Command Centre</div>
             </div>
           </div>
-          <div class="tc-controls">
-            <input class="search-box" id="searchQ" placeholder="Search name, phone or Box ID..." oninput="renderDeliveries()">
-            <select class="date-inp" id="agentFilter" onchange="renderDeliveries()" style="width:130px" title="Pick an agent to edit their route order below">
-              <option value="">All Agents</option>
-            </select>
-            <button class="topbar-btn secondary" onclick="saveRouteOrder()" title="Type a new position number next to any stop, then click here to save">💾 Save Route Order</button>
-            <button class="topbar-btn" onclick="openM('addDeliveryModal')">+ Add</button>
+        </div>
+        <div class="nav-section">
+          <div class="nav-label">Overview</div>
+          <div class="nav-item active" onclick="nav('overview',this)"><span class="ni">◈</span><span>Dashboard</span>
+          </div>
+          <div class="nav-item" onclick="nav('delayed',this)">
+            <span class="ni">⚡</span><span>Delayed</span>
+            <span class="nav-badge" id="delayedBadge" style="display:none">0</span>
           </div>
         </div>
-        <div style="overflow-x:auto"><table>
-          <thead><tr><th>#</th><th>Box ID</th><th>Customer</th><th>Pickup Address</th><th>Deliver To</th><th>Agent</th><th>Order</th><th>Status</th><th>Action</th></tr></thead>
-          <tbody id="deliveryBody"></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- CUSTOMERS -->
-    <div class="panel" id="panel-customers">
-      <div class="tcard">
-        <div class="tcard-head">
-          <div class="tcard-title">Customer Master List</div>
-          <div class="tc-controls">
-            <input class="search-box" id="custSearch" placeholder="Search name, phone, Box ID or zone..." oninput="renderCustomers()">
-            <select class="date-inp" id="custSort" onchange="renderCustomers()" style="width:130px">
-              <option value="boxid">Sort: Box ID</option>
-              <option value="name">Sort: Name</option>
-              <option value="zone">Sort: Zone</option>
-            </select>
-            <select class="date-inp" id="custAgentFilter" onchange="renderCustomers()" style="width:150px">
-              <option value="">All Agents</option>
-            </select>
-            <button class="topbar-btn secondary" onclick="exportCustomersToExcel()">⬇ Export Excel</button>
-            <button class="topbar-btn secondary" onclick="openM('addCustomerModal')">+ Add Customer</button>
+        <div class="nav-section">
+          <div class="nav-label">Operations</div>
+          <div class="nav-item" onclick="nav('assign',this)"><span class="ni">🎯</span><span>Auto Assign</span></div>
+          <div class="nav-item" id="navItemDeliveries" onclick="nav('deliveries',this)"><span
+              class="ni">📦</span><span>Deliveries</span></div>
+          <div class="nav-item" onclick="nav('customers',this)"><span class="ni">👥</span><span>Customers</span></div>
+          <div class="nav-item" onclick="nav('import',this)"><span class="ni">📊</span><span>Excel Import</span></div>
+        </div>
+        <div class="nav-section">
+          <div class="nav-label">Communication</div>
+          <div class="nav-item" id="navItemInbox" onclick="nav('inbox',this)">
+            <span class="ni">💬</span><span>Customer Inbox</span>
+            <span class="nav-badge purple" id="inboxBadge" style="display:none">0</span>
+          </div>
+          <div class="nav-item" onclick="nav('broadcast',this)"><span class="ni">📣</span><span>Broadcast</span></div>
+          <div class="nav-item" id="navItemNobox" onclick="nav('nobox',this)">
+            <span class="ni">🚫</span><span>No Box Requests</span>
+            <span class="nav-badge blue" id="noboxBadge" style="display:none">0</span>
           </div>
         </div>
-        <div style="overflow-x:auto"><table>
-          <thead><tr><th>#</th><th>Box ID</th><th>Name</th><th>Phone</th><th>Pickup</th><th>Deliver To</th><th>Zone</th><th>Preferred Agent</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="customerBody"></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- EXCEL IMPORT -->
-    <div class="panel" id="panel-import">
-      <div style="max-width:700px">
-        <div class="tcard" style="margin-bottom:14px">
-          <div class="tcard-head">
-            <div class="tcard-title">Required Excel Columns</div>
-            <button class="topbar-btn secondary" onclick="downloadTemplate()">⬇ Download Template</button>
-          </div>
-          <div style="padding:14px 18px">
-            <div class="col-headers" style="grid-template-columns:repeat(6,1fr)">
-              <div class="col-chip">CustomerName</div><div class="col-chip">Phone</div>
-              <div class="col-chip">BoxID</div>
-              <div class="col-chip">PickupLocation</div><div class="col-chip">DeliveryAddress</div><div class="col-chip">Zone</div>
+        <div class="nav-section">
+          <div class="nav-label">Team</div>
+          <div class="nav-item" onclick="nav('agents',this)"><span class="ni">👤</span><span>Agents</span></div>
+          <div class="nav-item" onclick="nav('history',this)"><span class="ni">🗂</span><span>History</span></div>
+          <div class="nav-item" id="navItemAnalytics" onclick="nav('analytics',this)"><span
+              class="ni">📈</span><span>Analytics</span></div>
+          <div class="nav-item" onclick="nav('reset',this)"><span class="ni">🔄</span><span>Daily Reset</span></div>
+        </div>
+        <div class="sidebar-foot">
+          <div class="admin-row">
+            <div class="admin-av" id="adminAv">A</div>
+            <div>
+              <div class="admin-name" id="adminName">Admin</div>
+              <div class="admin-role">Manager</div>
             </div>
-            <div style="font-size:11px;color:var(--muted)">Optional: AgentUID, Notes, ItemCount</div>
           </div>
+          <span class="logout-link" onclick="doLogout()">Sign out</span>
         </div>
-        <div class="tcard" style="margin-bottom:14px">
-          <div class="tcard-head"><div class="tcard-title">Agent UIDs</div></div>
-          <div style="overflow-x:auto"><table>
-            <thead><tr><th>Agent Name</th><th>Email</th><th>Zone</th><th>UID — click to copy</th></tr></thead>
-            <tbody id="uidBody"></tbody>
-          </table></div>
+      </div>
+
+      <!-- MAIN -->
+      <div class="main">
+        <div class="topbar">
+          <div class="page-title" id="pageTitle">Dashboard</div>
+          <div class="topbar-date" id="todayDate"></div>
+
+          <div class="live-pill">
+            <div class="live-dot"></div>Live
+          </div>
+
+          <button class="topbar-btn green-btn" id="btnMarkAllDelivered" onclick="markAllDelivered()"
+            style="font-size:11px;padding:6px 14px">
+            ✅ Mark All Delivered
+          </button>
         </div>
-        <div class="tcard">
-          <div class="tcard-head"><div class="tcard-title">Upload Excel File</div></div>
-          <div style="padding:16px">
-            <div class="import-zone" id="dropZone" onclick="document.getElementById('fileInput').click()" ondragover="dragOver(event)" ondragleave="dragLeave()" ondrop="dropFile(event)">
-              <div class="import-icon">📊</div>
-              <div class="import-title">Drop your Excel or CSV file here</div>
-              <div class="import-sub">Click to browse — imports to Customer Master List permanently</div>
-              <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="readFile(this.files[0])">
+        <div class="content">
+
+          <!-- OVERVIEW -->
+          <div class="panel active" id="panel-overview">
+            <div class="stat-grid">
+              <div class="stat-card total clickable" id="card_ALL" onclick="goToFiltered('ALL')"
+                title="View all today's deliveries">
+                <div class="stat-num orange" id="ov_total">0</div>
+                <div class="stat-lbl">Total Today</div>
+                <div class="stat-sub" id="ov_date"></div>
+              </div>
+              <div class="stat-card pending clickable" id="card_Pending" onclick="goToFiltered('Pending')"
+                title="View pending deliveries">
+                <div class="stat-num amber" id="ov_pending">0</div>
+                <div class="stat-lbl">Pending</div>
+                <div class="stat-sub">Awaiting pickup</div>
+              </div>
+              <div class="stat-card done clickable" id="card_DONE" onclick="goToFiltered('DONE')"
+                title="View completed deliveries">
+                <div class="stat-num green" id="ov_done">0</div>
+                <div class="stat-lbl">Completed</div>
+                <div class="stat-sub">Picked + Delivered</div>
+              </div>
+              <div class="stat-card delayed clickable" id="card_Delayed" onclick="goToFiltered('Delayed')"
+                title="View delayed deliveries">
+                <div class="stat-num red" id="ov_delayed">0</div>
+                <div class="stat-lbl">Delayed</div>
+                <div class="stat-sub" id="ov_delayedSub">All clear</div>
+              </div>
+              <div class="stat-card nobox clickable" id="card_NoBox" onclick="goToFiltered('NoBox')"
+                title="View no-box deliveries today">
+                <div class="stat-num teal" id="ov_noboxtoday">0</div>
+                <div class="stat-lbl">No Box Today</div>
+                <div class="stat-sub">Marked no box</div>
+              </div>
             </div>
-            <div id="importPreviewSection" style="display:none;margin-top:12px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
-                <strong id="importCount" style="font-size:13px;color:var(--green)"></strong>
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                  <select id="overrideAgent" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:11px;color:var(--text);outline:none">
-                    <option value="">Assign all to one agent (optional)</option>
-                  </select>
-                  <button class="topbar-btn green-btn" onclick="importCustomers()">✅ Import All</button>
+            <div class="stat-grid" style="margin-bottom:20px">
+              <div class="stat-card msgs clickable" id="card_msgs"
+                onclick="nav('inbox',document.getElementById('navItemInbox'))" title="Open customer inbox">
+                <div class="stat-num purple" id="ov_msgs">0</div>
+                <div class="stat-lbl">Unread Messages</div>
+                <div class="stat-sub">From customers</div>
+              </div>
+              <div class="stat-card nobox clickable" id="card_noboxtomorrow"
+                onclick="nav('nobox',document.getElementById('navItemNobox'))" title="View no-box requests">
+                <div class="stat-num teal" id="ov_nobox">0</div>
+                <div class="stat-lbl">No Box Tomorrow</div>
+                <div class="stat-sub">Opt-outs for next day</div>
+              </div>
+            </div>
+
+            <div class="progress-row">
+              <div class="progress-label">Completion</div>
+              <div class="progress-track">
+                <div class="progress-fill" id="progressBar" style="width:0%"></div>
+              </div>
+              <div class="progress-pct" id="progressPct" style="color:var(--green)">0%</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="tcard">
+                <div class="tcard-head">
+                  <div class="tcard-title">Agent Load Today</div>
+                </div>
+                <div class="agent-mini-grid" id="agentLoadGrid" style="padding:14px"></div>
+              </div>
+              <div class="tcard">
+                <div class="tcard-head">
+                  <div class="tcard-title">Recent Activity</div>
+                  <button class="topbar-btn secondary" style="font-size:11px"
+                    onclick="nav('inbox',document.getElementById('navItemInbox'))">View Inbox</button>
+                </div>
+                <div id="recentActivity"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DELAYED -->
+          <div class="panel" id="panel-delayed">
+            <div
+              style="background:var(--redbg);border:1px solid var(--red);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+              <span style="font-size:22px">⚡</span>
+              <div>
+                <div style="font-weight:700;color:var(--red);font-size:14px">Delayed Deliveries — Act Now</div>
+                <div style="font-size:12px;color:var(--muted)" id="delayedInfo">Real-time delayed list</div>
+              </div>
+            </div>
+            <div class="tcard">
+              <div style="overflow-x:auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Box ID</th>
+                      <th>Customer</th>
+                      <th>Phone</th>
+                      <th>Current Agent</th>
+                      <th>Pickup Location</th>
+                      <th>Reassign To</th>
+                    </tr>
+                  </thead>
+                  <tbody id="delayedBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- AUTO ASSIGN -->
+          <div class="panel" id="panel-assign">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+              <div class="tcard" style="padding:20px">
+                <div style="font-size:15px;font-weight:600;margin-bottom:6px">Assign Today's Routes</div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.7">
+                  Reads all active customers → assigns to agents by zone → agents see deliveries in the app
+                  instantly.<br><br>
+                  <span style="color:var(--amber);font-weight:600">Run every morning before agents start work.</span>
+                </div>
+                <button class="topbar-btn green-btn" onclick="runAssign()"
+                  style="width:100%;padding:10px;font-size:13px;margin-bottom:8px">🚀 Assign Today's Routes</button>
+                <button class="topbar-btn secondary" onclick="previewAssign()" style="width:100%;font-size:12px">👁
+                  Preview (no changes)</button>
+                <div id="assignProgress" style="display:none;margin-top:10px">
+                  <div class="progress-import">
+                    <div class="progress-import-fill" id="assignBar" style="width:0%"></div>
+                  </div>
+                  <div id="assignStatus" style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px">
+                  </div>
                 </div>
               </div>
-              <div class="preview-table">
-                <table><thead><tr><th style="padding:8px 12px">#</th><th style="padding:8px 12px">Name</th><th style="padding:8px 12px">Phone</th><th style="padding:8px 12px">Box ID</th><th style="padding:8px 12px">Pickup</th><th style="padding:8px 12px">Zone</th></tr></thead>
-                <tbody id="previewBody"></tbody></table>
-              </div>
-              <div class="progress-import" id="importProgressWrap" style="display:none"><div class="progress-import-fill" id="importProgressFill" style="width:0%"></div></div>
-              <div id="importStatusText" style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════════ -->
-    <!-- CUSTOMER INBOX                     -->
-    <!-- ══════════════════════════════════ -->
-    <div class="panel" id="panel-inbox">
-      <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:15px;font-weight:600">Customer Messages</div>
-          <div style="font-size:12px;color:var(--muted)">Reply to customer queries in real time</div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <input class="search-box" id="inboxSearch" placeholder="Search customers..." oninput="filterInbox()">
-        </div>
-      </div>
-      <div class="inbox-layout">
-        <div class="inbox-list" id="inboxList">
-          <div class="empty-state"><div class="empty-icon">💬</div><div class="empty-text">No messages yet</div></div>
-        </div>
-        <div class="chat-area" id="chatArea">
-          <div class="no-chat"><div style="font-size:32px;margin-bottom:8px">💬</div><div style="font-size:13px">Select a conversation</div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════════ -->
-    <!-- BROADCAST                          -->
-    <!-- ══════════════════════════════════ -->
-    <div class="panel" id="panel-broadcast">
-      <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
-
-        <!-- Left: composer -->
-        <div>
-          <div class="tcard" style="margin-bottom:14px;padding:20px">
-            <div style="font-size:15px;font-weight:600;margin-bottom:4px">Send Broadcast Message</div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:18px">Send a message to all customers or a specific group via WhatsApp or SMS through Twilio.</div>
-
-            <div class="twilio-setup" id="twilioWarning">
-              ⚙️ <strong>WATI Setup Required:</strong> Enter your WATI API endpoint and access token below to enable sending. Get them from your WATI dashboard under Settings → API Docs.
-            </div>
-
-            <!-- Channel selector -->
-            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">1. Choose Channel</div>
-            <div class="channel-grid" style="grid-template-columns:1fr">
-              <div class="channel-card whatsapp selected" id="ch-whatsapp">
-                <div class="channel-icon">💬</div>
-                <div class="channel-name">WhatsApp</div>
-                <div class="channel-desc">Send via WhatsApp Business API through WATI</div>
+              <div class="tcard" style="padding:20px">
+                <div style="font-size:15px;font-weight:600;margin-bottom:10px">Today's Numbers</div>
+                <div style="padding:10px;background:var(--bg);border-radius:8px;font-size:13px;margin-bottom:10px">
+                  Active customers: <span id="activeCustomerCount"
+                    style="color:var(--green);font-weight:700">loading...</span><br>
+                  Active agents: <span id="activeAgentCount"
+                    style="color:var(--accent);font-weight:700">loading...</span>
+                </div>
+                <details style="font-size:12px;color:var(--muted)">
+                  <summary style="cursor:pointer;font-weight:600;color:var(--text)">How assignment works</summary>
+                  <div style="line-height:2.1;margin-top:8px">
+                    1. Customers with a preferred agent → assigned first<br>
+                    2. Zone match → customer zone = agent zone<br>
+                    3. Load balance → fewest deliveries gets next<br>
+                    4. Pickup order → sorted alphabetically<br>
+                    5. Status set to <span style="color:var(--amber);font-weight:600">Pending</span> automatically
+                  </div>
+                </details>
               </div>
             </div>
-
-            <!-- Recipients -->
-            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">2. Recipients</div>
-            <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-              <button class="f-btn on" id="rec-all" onclick="selectRecipients('all',this)">All Customers</button>
-              <button class="f-btn off" id="rec-zone" onclick="selectRecipients('zone',this)">By Zone</button>
-              <button class="f-btn off" id="rec-nobox" onclick="selectRecipients('nobox',this)">No Box Tomorrow</button>
-            </div>
-            <div id="zoneSelector" style="display:none;margin-bottom:10px">
-              <select class="date-inp" id="broadcastZone" style="width:200px">
-                <option value="">Select Zone...</option>
-              </select>
-            </div>
-            <div id="recipientCount" style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:16px">
-              All customers will receive this message
-            </div>
-
-            <!-- Message -->
-            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">3. Message</div>
-            <div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:0">
-              <span style="font-size:11px;color:var(--muted);margin-bottom:6px;width:100%">Quick templates:</span>
-              <span class="template-chip" onclick="useTemplate('holiday')">🏖️ Holiday Notice</span>
-              <span class="template-chip" onclick="useTemplate('delay')">⚡ Route Delay</span>
-              <span class="template-chip" onclick="useTemplate('nobox')">📦 No Box Reminder</span>
-              <span class="template-chip" onclick="useTemplate('menu')">🍛 Delivered message</span>
-              <span class="template-chip" onclick="useTemplate('price')">💰 Price Change</span>
-            </div>
-            <div class="fg" style="margin-bottom:10px">
-              <textarea class="chat-inp" id="broadcastMsg" rows="5" placeholder="Type your message here... Use {name} for customer name, {boxid} for Box ID, {date} for today's date" oninput="updatePreview()" style="width:100%;resize:vertical;min-height:100px"></textarea>
-            </div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:16px"><span id="broadcastCharCount">0</span> / 1000 characters</div>
-
-            <!-- Send -->
-            <button class="topbar-btn" id="broadcastSendBtn" onclick="openM_broadcast()" style="width:100%;padding:12px;font-size:14px;font-weight:600">
-              📣 Send Broadcast
-            </button>
-            <div class="send-progress" id="sendProgress">
-              <div class="send-progress-fill" id="sendProgressFill" style="width:0%"></div>
-            </div>
-            <div id="sendStatusText" style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px"></div>
-          </div>
-        </div>
-
-        <!-- Right: settings + preview -->
-        <div>
-          <div class="tcard" style="margin-bottom:14px;padding:18px">
-            <div style="font-size:14px;font-weight:600;margin-bottom:12px">⚙️ WATI Settings</div>
-            <div class="fg">
-              <label>API Endpoint</label>
-              <input id="watiEndpoint" placeholder="https://live-mt-server.wati.io/123456">
-            </div>
-            <div class="fg">
-              <label>Access Token</label>
-              <input id="watiToken" type="password" placeholder="••••••••••••••••">
-            </div>
-            <div class="fg">
-              <label>Template Name (must match an approved WATI template)</label>
-              <input id="watiTemplateName" placeholder="e.g. holiday_notice">
-            </div>
-            <button class="topbar-btn green-btn" onclick="saveWatiConfig()" style="width:100%">Save Credentials</button>
-            <div class="info-box teal" style="margin-top:10px">
-              Credentials are saved locally in your browser. WhatsApp requires an approved template for broadcasts outside a 24-hour chat window — create templates in your WATI dashboard first.
-            </div>
-          </div>
-
-          <div class="tcard" style="padding:18px">
-            <div style="font-size:14px;font-weight:600;margin-bottom:10px">Message Preview</div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">How it looks to the customer</div>
-            <div style="background:#E8F5E9;border-radius:12px;padding:14px;position:relative">
-              <div style="font-size:10px;color:#555;margin-bottom:6px;font-weight:700">🍱 Lunchbox</div>
-              <div class="broadcast-preview" id="msgPreview" style="background:transparent;border:none;padding:0;color:#212121;font-size:13px">
-                Your message preview will appear here...
+            <div class="tcard">
+              <div class="tcard-head">
+                <div class="tcard-title">Assignment Preview</div>
+              </div>
+              <div class="assign-preview" id="assignPreview" style="padding:14px">
+                <div class="empty-state" style="grid-column:1/-1">Click "Preview" to see how customers will be
+                  distributed</div>
               </div>
             </div>
-            <div style="margin-top:12px;font-size:12px;color:var(--muted)">
-              Broadcast history saved to Firestore for audit trail.
+          </div>
+
+          <!-- DELIVERIES -->
+          <div class="panel" id="panel-deliveries">
+            <div class="stat-grid" style="margin-bottom:16px">
+              <div class="stat-card total clickable" id="dlcard_ALL" onclick="applyDeliveryFilter('ALL')">
+                <div class="stat-num orange" id="dl_total">0</div>
+                <div class="stat-lbl">Total</div>
+              </div>
+              <div class="stat-card pending clickable" id="dlcard_Pending" onclick="applyDeliveryFilter('Pending')">
+                <div class="stat-num amber" id="dl_pending">0</div>
+                <div class="stat-lbl">Pending</div>
+              </div>
+              <div class="stat-card done clickable" id="dlcard_DONE" onclick="applyDeliveryFilter('DONE')">
+                <div class="stat-num green" id="dl_done">0</div>
+                <div class="stat-lbl">Completed</div>
+              </div>
+              <div class="stat-card delayed clickable" id="dlcard_Delayed" onclick="applyDeliveryFilter('Delayed')">
+                <div class="stat-num red" id="dl_delayed">0</div>
+                <div class="stat-lbl">Delayed</div>
+              </div>
+              <div class="stat-card nobox clickable" id="dlcard_NoBox" onclick="applyDeliveryFilter('NoBox')">
+                <div class="stat-num teal" id="dl_nobox">0</div>
+                <div class="stat-lbl">No Box</div>
+              </div>
+            </div>
+            <div class="tcard">
+              <div class="tcard-head">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <div class="tcard-title">Deliveries</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <button class="f-btn on" data-status="ALL" onclick="applyDeliveryFilter('ALL')">All</button>
+                    <button class="f-btn off" data-status="Pending"
+                      onclick="applyDeliveryFilter('Pending')">Pending</button>
+                    <button class="f-btn off" data-status="Picked"
+                      onclick="applyDeliveryFilter('Picked')">Picked</button>
+                    <button class="f-btn off red" data-status="Delayed"
+                      onclick="applyDeliveryFilter('Delayed')">Delayed</button>
+                    <button class="f-btn off" data-status="Delivered"
+                      onclick="applyDeliveryFilter('Delivered')">Delivered</button>
+                    <button class="f-btn off purple" data-status="NoBox" onclick="applyDeliveryFilter('NoBox')">No
+                      Box</button>
+                  </div>
+                </div>
+                <div class="tc-controls">
+                  <input class="search-box" id="searchQ" placeholder="Search name, phone or Box ID..."
+                    oninput="renderDeliveries()">
+                  <select class="date-inp" id="agentFilter" onchange="renderDeliveries()" style="width:130px"
+                    title="Pick an agent to edit their route order below">
+                    <option value="">All Agents</option>
+                  </select>
+                  <button class="topbar-btn secondary" onclick="saveRouteOrder()"
+                    title="Type a new position number next to any stop, then click here to save">💾 Save Route
+                    Order</button>
+                  <button class="topbar-btn" onclick="openM('addDeliveryModal')">+ Add</button>
+                </div>
+              </div>
+              <div style="overflow-x:auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Box ID</th>
+                      <th>Customer</th>
+                      <th>Pickup Address</th>
+                      <th>Deliver To</th>
+                      <th>Agent</th>
+                      <th>Order</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="deliveryBody"></tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Broadcast log -->
-      <div class="tcard" style="margin-top:4px">
-        <div class="tcard-head"><div class="tcard-title">Broadcast History</div></div>
-        <div style="overflow-x:auto"><table>
-          <thead><tr><th>Date/Time</th><th>Channel</th><th>Message</th><th>Recipients</th><th>Status</th></tr></thead>
-          <tbody id="broadcastLog"></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════════ -->
-    <!-- NO BOX REQUESTS                    -->
-    <!-- ══════════════════════════════════ -->
-    <div class="panel" id="panel-nobox">
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
-        <div class="stat-card nobox"><div class="stat-num teal" id="nb_tomorrow">0</div><div class="stat-lbl">Tomorrow</div></div>
-        <div class="stat-card pending"><div class="stat-num amber" id="nb_today">0</div><div class="stat-lbl">Today</div></div>
-        <div class="stat-card done"><div class="stat-num green" id="nb_total">0</div><div class="stat-lbl">All Time</div></div>
-      </div>
-      <div class="tcard">
-        <div class="tcard-head">
-          <div class="tcard-title">No Box Requests</div>
-          <div class="tc-controls">
-            <input type="date" class="date-inp" id="noboxDateFilter">
-            <button class="topbar-btn secondary" onclick="loadNoBoxRequests()">Filter</button>
-          </div>
-        </div>
-        <div style="overflow-x:auto"><table>
-          <thead><tr><th>#</th><th>Customer</th><th>Phone</th><th>Date</th><th>Requested At</th><th>Status</th></tr></thead>
-          <tbody id="noboxBody"></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- AGENTS -->
-    <div class="panel" id="panel-agents">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <div>
-          <div style="font-size:15px;font-weight:600">Delivery Agents</div>
-          <div style="font-size:12px;color:var(--muted)">Manage team, credentials and performance</div>
-        </div>
-        <button class="topbar-btn" onclick="openM('addAgentModal')">+ Add Agent</button>
-      </div>
-      <div class="agent-grid" id="agentGrid">
-        <div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">👤</div><div class="empty-text">Loading agents...</div></div>
-      </div>
-    </div>
-
-    <!-- HISTORY -->
-    <div class="panel" id="panel-history">
-      <div class="tcard">
-        <div class="tcard-head">
-          <div class="tcard-title">Delivery History</div>
-          <div class="tc-controls">
-            <input type="date" class="date-inp" id="histDate">
-            <button class="topbar-btn" onclick="loadHistory()">Load</button>
-            <button class="topbar-btn purple-btn" onclick="nav('analytics', document.getElementById('navItemAnalytics'))">📈 Analytics</button>
-          </div>
-          <div class="tc-controls" style="padding:0 18px 14px">
-            <select class="date-inp" id="histExportScope" onchange="onHistExportScopeChange()">
-              <option value="all">Export: All Time</option>
-              <option value="range">Export: Date Range</option>
-              <option value="month" selected>Export: Month</option>
-            </select>
-            <input type="date" class="date-inp" id="histExportStart" style="display:none" title="Start date">
-            <input type="date" class="date-inp" id="histExportEnd" style="display:none" title="End date">
-            <input type="month" class="date-inp" id="histExportMonth" style="display:inline-block">
-            <button class="topbar-btn secondary" onclick="exportHistoryToExcel()">⬇ Export Excel</button>
-          </div>
-        </div>
-        <div id="historySummary" style="display:none" class="history-summary">
-          <div class="hist-stat"><div class="hist-num" id="hs_total" style="color:var(--accent)">0</div><div class="hist-lbl">Total</div></div>
-          <div class="hist-stat"><div class="hist-num" id="hs_done" style="color:var(--green)">0</div><div class="hist-lbl">Delivered</div></div>
-          <div class="hist-stat"><div class="hist-num" id="hs_delayed" style="color:var(--red)">0</div><div class="hist-lbl">Delayed</div></div>
-          <div class="hist-stat"><div class="hist-num" id="hs_rate" style="color:var(--accent)">0%</div><div class="hist-lbl">Success Rate</div></div>
-        </div>
-        <div style="overflow-x:auto"><table>
-          <thead><tr><th>#</th><th>Customer</th><th>Phone</th><th>Agent</th><th>Status</th><th>Picked Time</th></tr></thead>
-          <tbody id="histBody"></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- ANALYTICS -->
-    <div class="panel" id="panel-analytics">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
-        <div>
-          <div style="font-size:15px;font-weight:600">Customer &amp; Agent Analytics</div>
-          <div style="font-size:12px;color:var(--muted)" id="analyticsScopeLabel">All-time performance, built from your daily History archives</div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <select class="date-inp" id="analyticsScope" onchange="onAnalyticsScopeChange()">
-            <option value="all">All Time</option>
-            <option value="month" selected>Specific Month</option>
-            <option value="range">Date Range</option>
-          </select>
-          <input type="month" class="date-inp" id="analyticsMonthPicker" style="display:none" onchange="loadAnalytics()">
-          <input type="date" class="date-inp" id="analyticsRangeStart" style="display:none" onchange="loadAnalytics()" title="Start date">
-          <input type="date" class="date-inp" id="analyticsRangeEnd" style="display:none" onchange="loadAnalytics()" title="End date">
-          <button class="topbar-btn secondary" onclick="loadAnalytics(true)">↻ Refresh</button>
-          <button class="topbar-btn secondary" onclick="exportAnalyticsToExcel()">⬇ Export Excel</button>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-        <button class="f-btn on" id="atab-customers" onclick="analyticsTab('customers',this)">👥 Customers</button>
-        <button class="f-btn off" id="atab-agents" onclick="analyticsTab('agents',this)">🚴 Agents</button>
-      </div>
-
-      <div id="analyticsLoading" style="display:none" class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Crunching delivery history…</div></div>
-                         <div class="tcard" style="padding:18px;margin-bottom:16px">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-    <div style="font-size:14px;font-weight:600">📈 Weekly Completion Rate</div>
-    <div style="font-size:11px;color:var(--muted)" id="weeklyChartRange"></div>
-  </div>
-  <canvas id="weeklyTrendChart" height="90"></canvas>
-</div>
-      <!-- CUSTOMERS VIEW -->
-      <div id="analyticsCustomersView">
-        <div class="stat-grid" style="margin-bottom:16px">
-          <div class="stat-card total"><div class="stat-num orange" id="an_totalCust">0</div><div class="stat-lbl">Customers Tracked</div></div>
-          <div class="stat-card pending"><div class="stat-num amber" id="an_totalDelayedFlag">0</div><div class="stat-lbl" id="an_totalDelayedFlagLbl">Delay Flags (All Time)</div></div>
-          <div class="stat-card delayed"><div class="stat-num red" id="an_totalEndedDelayed">0</div><div class="stat-lbl" id="an_totalEndedDelayedLbl">Ended Delayed (All Time)</div></div>
-          <div class="stat-card nobox"><div class="stat-num teal" id="an_totalNoboxReq">0</div><div class="stat-lbl" id="an_totalNoboxReqLbl">No Box Requests (All Time)</div></div>
-        </div>
-        <div class="tcard">
-          <div class="tcard-head">
-            <div class="tcard-title">Customer Breakdown <span style="font-weight:400;color:var(--muted);font-size:11px">— click a row for full detail</span></div>
-            <div class="tc-controls">
-              <input class="search-box" id="analyticsCustSearch" placeholder="Search name, Box ID or zone..." oninput="drawAnalyticsCustomerTable()">
+          <!-- CUSTOMERS -->
+          <div class="panel" id="panel-customers">
+            <div class="tcard">
+              <div class="tcard-head">
+                <div class="tcard-title">Customer Master List</div>
+                <div class="tc-controls">
+                  <input class="search-box" id="custSearch" placeholder="Search name, phone, Box ID or zone..."
+                    oninput="renderCustomers()">
+                  <select class="date-inp" id="custSort" onchange="renderCustomers()" style="width:130px">
+                    <option value="boxid">Sort: Box ID</option>
+                    <option value="name">Sort: Name</option>
+                    <option value="zone">Sort: Zone</option>
+                  </select>
+                  <select class="date-inp" id="custAgentFilter" onchange="renderCustomers()" style="width:150px">
+                    <option value="">All Agents</option>
+                  </select>
+                  <button class="topbar-btn secondary" onclick="exportCustomersToExcel()">⬇ Export Excel</button>
+                  <button class="topbar-btn secondary" onclick="openM('addCustomerModal')">+ Add Customer</button>
+                </div>
+              </div>
+              <div style="overflow-x:auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Box ID</th>
+                      <th>Name</th>
+                      <th>Phone</th>
+                      <th>Pickup</th>
+                      <th>Deliver To</th>
+                      <th>Zone</th>
+                      <th>Preferred Agent</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="customerBody"></tbody>
+                </table>
+              </div>
             </div>
           </div>
-          <div style="overflow-x:auto"><table>
-            <thead><tr><th>#</th><th>Box ID</th><th>Name</th><th>Zone</th><th>Total</th><th>No Box (Agent)</th><th>Times Delayed</th><th>Ended Delayed</th><th>No Box Requests</th></tr></thead>
-            <tbody id="analyticsCustomerBody"><tr><td colspan="9" class="empty-state"><div class="empty-text">Open this tab to load data</div></td></tr></tbody>
-          </table></div>
+
+          <!-- EXCEL IMPORT -->
+          <div class="panel" id="panel-import">
+            <div style="max-width:700px">
+              <div class="tcard" style="margin-bottom:14px">
+                <div class="tcard-head">
+                  <div class="tcard-title">Required Excel Columns</div>
+                  <button class="topbar-btn secondary" onclick="downloadTemplate()">⬇ Download Template</button>
+                </div>
+                <div style="padding:14px 18px">
+                  <div class="col-headers" style="grid-template-columns:repeat(6,1fr)">
+                    <div class="col-chip">CustomerName</div>
+                    <div class="col-chip">Phone</div>
+                    <div class="col-chip">BoxID</div>
+                    <div class="col-chip">PickupLocation</div>
+                    <div class="col-chip">DeliveryAddress</div>
+                    <div class="col-chip">Zone</div>
+                  </div>
+                  <div style="font-size:11px;color:var(--muted)">Optional: AgentUID, Notes, ItemCount</div>
+                </div>
+              </div>
+              <div class="tcard" style="margin-bottom:14px">
+                <div class="tcard-head">
+                  <div class="tcard-title">Agent UIDs</div>
+                </div>
+                <div style="overflow-x:auto">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Agent Name</th>
+                        <th>Email</th>
+                        <th>Zone</th>
+                        <th>UID — click to copy</th>
+                      </tr>
+                    </thead>
+                    <tbody id="uidBody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="tcard">
+                <div class="tcard-head">
+                  <div class="tcard-title">Upload Excel File</div>
+                </div>
+                <div style="padding:16px">
+                  <div class="import-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"
+                    ondragover="dragOver(event)" ondragleave="dragLeave()" ondrop="dropFile(event)">
+                    <div class="import-icon">📊</div>
+                    <div class="import-title">Drop your Excel or CSV file here</div>
+                    <div class="import-sub">Click to browse — imports to Customer Master List permanently</div>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none"
+                      onchange="readFile(this.files[0])">
+                  </div>
+                  <div id="importPreviewSection" style="display:none;margin-top:12px">
+                    <div
+                      style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+                      <strong id="importCount" style="font-size:13px;color:var(--green)"></strong>
+                      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <select id="overrideAgent"
+                          style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:11px;color:var(--text);outline:none">
+                          <option value="">Assign all to one agent (optional)</option>
+                        </select>
+                        <button class="topbar-btn green-btn" onclick="importCustomers()">✅ Import All</button>
+                      </div>
+                    </div>
+                    <div class="preview-table">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th style="padding:8px 12px">#</th>
+                            <th style="padding:8px 12px">Name</th>
+                            <th style="padding:8px 12px">Phone</th>
+                            <th style="padding:8px 12px">Box ID</th>
+                            <th style="padding:8px 12px">Pickup</th>
+                            <th style="padding:8px 12px">Zone</th>
+                          </tr>
+                        </thead>
+                        <tbody id="previewBody"></tbody>
+                      </table>
+                    </div>
+                    <div class="progress-import" id="importProgressWrap" style="display:none">
+                      <div class="progress-import-fill" id="importProgressFill" style="width:0%"></div>
+                    </div>
+                    <div id="importStatusText"
+                      style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══════════════════════════════════ -->
+          <!-- CUSTOMER INBOX                     -->
+          <!-- ══════════════════════════════════ -->
+          <div class="panel" id="panel-inbox">
+            <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div style="font-size:15px;font-weight:600">Customer Messages</div>
+                <div style="font-size:12px;color:var(--muted)">Reply to customer queries in real time</div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <input class="search-box" id="inboxSearch" placeholder="Search customers..." oninput="filterInbox()">
+              </div>
+            </div>
+            <div class="inbox-layout">
+              <div class="inbox-list" id="inboxList">
+                <div class="empty-state">
+                  <div class="empty-icon">💬</div>
+                  <div class="empty-text">No messages yet</div>
+                </div>
+              </div>
+              <div class="chat-area" id="chatArea">
+                <div class="no-chat">
+                  <div style="font-size:32px;margin-bottom:8px">💬</div>
+                  <div style="font-size:13px">Select a conversation</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══════════════════════════════════ -->
+          <!-- BROADCAST                          -->
+          <!-- ══════════════════════════════════ -->
+          <div class="panel" id="panel-broadcast">
+            <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
+
+              <!-- Left: composer -->
+              <div>
+                <div class="tcard" style="margin-bottom:14px;padding:20px">
+                  <div style="font-size:15px;font-weight:600;margin-bottom:4px">Send Broadcast Message</div>
+                  <div style="font-size:12px;color:var(--muted);margin-bottom:18px">Send a message to all customers or a
+                    specific group via WhatsApp or SMS through Twilio.</div>
+
+                  <div class="twilio-setup" id="twilioWarning">
+                    ⚙️ <strong>WATI Setup Required:</strong> Enter your WATI API endpoint and access token below to
+                    enable sending. Get them from your WATI dashboard under Settings → API Docs.
+                  </div>
+
+                  <!-- Channel selector -->
+                  <div
+                    style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+                    1. Choose Channel</div>
+                  <div class="channel-grid" style="grid-template-columns:1fr">
+                    <div class="channel-card whatsapp selected" id="ch-whatsapp">
+                      <div class="channel-icon">💬</div>
+                      <div class="channel-name">WhatsApp</div>
+                      <div class="channel-desc">Send via WhatsApp Business API through WATI</div>
+                    </div>
+                  </div>
+
+                  <!-- Recipients -->
+                  <div
+                    style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+                    2. Recipients</div>
+                  <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+                    <button class="f-btn on" id="rec-all" onclick="selectRecipients('all',this)">All Customers</button>
+                    <button class="f-btn off" id="rec-zone" onclick="selectRecipients('zone',this)">By Zone</button>
+                    <button class="f-btn off" id="rec-nobox" onclick="selectRecipients('nobox',this)">No Box
+                      Tomorrow</button>
+                  </div>
+                  <div id="zoneSelector" style="display:none;margin-bottom:10px">
+                    <select class="date-inp" id="broadcastZone" style="width:200px">
+                      <option value="">Select Zone...</option>
+                    </select>
+                  </div>
+                  <div id="recipientCount" style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:16px">
+                    All customers will receive this message
+                  </div>
+
+                  <!-- Message -->
+                  <div
+                    style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+                    3. Message</div>
+                  <div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:0">
+                    <span style="font-size:11px;color:var(--muted);margin-bottom:6px;width:100%">Quick templates:</span>
+                    <span class="template-chip" onclick="useTemplate('holiday')">🏖️ Holiday Notice</span>
+                    <span class="template-chip" onclick="useTemplate('delay')">⚡ Route Delay</span>
+                    <span class="template-chip" onclick="useTemplate('nobox')">📦 No Box Reminder</span>
+                    <span class="template-chip" onclick="useTemplate('menu')">🍛 Delivered message</span>
+                    <span class="template-chip" onclick="useTemplate('price')">💰 Price Change</span>
+                  </div>
+                  <div class="fg" style="margin-bottom:10px">
+                    <textarea class="chat-inp" id="broadcastMsg" rows="5"
+                      placeholder="Type your message here... Use {name} for customer name, {boxid} for Box ID, {date} for today's date"
+                      oninput="updatePreview()" style="width:100%;resize:vertical;min-height:100px"></textarea>
+                  </div>
+                  <div style="font-size:11px;color:var(--muted);margin-bottom:16px"><span
+                      id="broadcastCharCount">0</span> / 1000 characters</div>
+
+                  <!-- Send -->
+                  <button class="topbar-btn" id="broadcastSendBtn" onclick="openM_broadcast()"
+                    style="width:100%;padding:12px;font-size:14px;font-weight:600">
+                    📣 Send Broadcast
+                  </button>
+                  <div class="send-progress" id="sendProgress">
+                    <div class="send-progress-fill" id="sendProgressFill" style="width:0%"></div>
+                  </div>
+                  <div id="sendStatusText" style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: settings + preview -->
+              <div>
+                <div class="tcard" style="margin-bottom:14px;padding:18px">
+                  <div style="font-size:14px;font-weight:600;margin-bottom:12px">⚙️ WATI Settings</div>
+                  <div class="fg">
+                    <label>API Endpoint</label>
+                    <input id="watiEndpoint" placeholder="https://live-mt-server.wati.io/123456">
+                  </div>
+                  <div class="fg">
+                    <label>Access Token</label>
+                    <input id="watiToken" type="password" placeholder="••••••••••••••••">
+                  </div>
+                  <div class="fg">
+                    <label>Template Name (must match an approved WATI template)</label>
+                    <input id="watiTemplateName" placeholder="e.g. holiday_notice">
+                  </div>
+                  <button class="topbar-btn green-btn" onclick="saveWatiConfig()" style="width:100%">Save
+                    Credentials</button>
+                  <div class="info-box teal" style="margin-top:10px">
+                    Credentials are saved locally in your browser. WhatsApp requires an approved template for broadcasts
+                    outside a 24-hour chat window — create templates in your WATI dashboard first.
+                  </div>
+                </div>
+
+                <div class="tcard" style="padding:18px">
+                  <div style="font-size:14px;font-weight:600;margin-bottom:10px">Message Preview</div>
+                  <div style="font-size:11px;color:var(--muted);margin-bottom:8px">How it looks to the customer</div>
+                  <div style="background:#E8F5E9;border-radius:12px;padding:14px;position:relative">
+                    <div style="font-size:10px;color:#555;margin-bottom:6px;font-weight:700">🍱 Lunchbox</div>
+                    <div class="broadcast-preview" id="msgPreview"
+                      style="background:transparent;border:none;padding:0;color:#212121;font-size:13px">
+                      Your message preview will appear here...
+                    </div>
+                  </div>
+                  <div style="margin-top:12px;font-size:12px;color:var(--muted)">
+                    Broadcast history saved to Firestore for audit trail.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Broadcast log -->
+            <div class="tcard" style="margin-top:4px">
+              <div class="tcard-head">
+                <div class="tcard-title">Broadcast History</div>
+              </div>
+              <div style="overflow-x:auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date/Time</th>
+                      <th>Channel</th>
+                      <th>Message</th>
+                      <th>Recipients</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="broadcastLog"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══════════════════════════════════ -->
+          <!-- NO BOX REQUESTS                    -->
+          <!-- ══════════════════════════════════ -->
+          <div class="panel" id="panel-nobox">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+              <div class="stat-card nobox">
+                <div class="stat-num teal" id="nb_tomorrow">0</div>
+                <div class="stat-lbl">Tomorrow</div>
+              </div>
+              <div class="stat-card pending">
+                <div class="stat-num amber" id="nb_today">0</div>
+                <div class="stat-lbl">Today</div>
+              </div>
+              <div class="stat-card done">
+                <div class="stat-num green" id="nb_total">0</div>
+                <div class="stat-lbl">All Time</div>
+              </div>
+            </div>
+            <div class="tcard">
+              <div class="tcard-head">
+                <div class="tcard-title">No Box Requests</div>
+                <div class="tc-controls">
+                  <input type="date" class="date-inp" id="noboxDateFilter">
+                  <button class="topbar-btn secondary" onclick="loadNoBoxRequests()">Filter</button>
+                </div>
+              </div>
+              <div style="overflow-x:auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Customer</th>
+                      <th>Phone</th>
+                      <th>Date</th>
+                      <th>Requested At</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="noboxBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- AGENTS -->
+          <div class="panel" id="panel-agents">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+              <div>
+                <div style="font-size:15px;font-weight:600">Delivery Agents</div>
+                <div style="font-size:12px;color:var(--muted)">Manage team, credentials and performance</div>
+              </div>
+              <button class="topbar-btn" onclick="openM('addAgentModal')">+ Add Agent</button>
+            </div>
+            <div class="agent-grid" id="agentGrid">
+              <div class="empty-state" style="grid-column:1/-1">
+                <div class="empty-icon">👤</div>
+                <div class="empty-text">Loading agents...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- HISTORY -->
+          <div class="panel" id="panel-history">
+            <div class="tcard">
+              <div class="tcard-head">
+                <div class="tcard-title">Delivery History</div>
+                <div class="tc-controls">
+                  <input type="date" class="date-inp" id="histDate">
+                  <select class="date-inp" id="histAgentFilter" style="width:150px">
+                    <option value="">All Agents</option>
+                  </select>
+                  <button class="topbar-btn" onclick="loadHistory()">Load</button>
+                  <button class="topbar-btn purple-btn"
+                    onclick="nav('analytics', document.getElementById('navItemAnalytics'))">📈 Analytics</button>
+                </div>
+                <div class="tc-controls" style="padding:0 18px 14px">
+                  <select class="date-inp" id="histExportScope" onchange="onHistExportScopeChange()">
+                    <option value="all">Export: All Time</option>
+                    <option value="range">Export: Date Range</option>
+                    <option value="month" selected>Export: Month</option>
+                  </select>
+                  <input type="date" class="date-inp" id="histExportStart" style="display:none" title="Start date">
+                  <input type="date" class="date-inp" id="histExportEnd" style="display:none" title="End date">
+                  <input type="month" class="date-inp" id="histExportMonth" style="display:inline-block">
+                  <button class="topbar-btn secondary" onclick="exportHistoryToExcel()">⬇ Export Excel</button>
+                </div>
+              </div>
+              <div id="historySummary" style="display:none" class="history-summary">
+                <div class="hist-stat">
+                  <div class="hist-num" id="hs_total" style="color:var(--accent)">0</div>
+                  <div class="hist-lbl">Total</div>
+                </div>
+                <div class="hist-stat">
+                  <div class="hist-num" id="hs_done" style="color:var(--green)">0</div>
+                  <div class="hist-lbl">Delivered</div>
+                </div>
+                <div class="hist-stat">
+                  <div class="hist-num" id="hs_delayed" style="color:var(--red)">0</div>
+                  <div class="hist-lbl">Delayed</div>
+                </div>
+                <div class="hist-stat">
+                  <div class="hist-num" id="hs_rate" style="color:var(--accent)">0%</div>
+                  <div class="hist-lbl">Success Rate</div>
+                </div>
+              </div>
+              <div style="overflow-x:auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Customer</th>
+                      <th>Phone</th>
+                      <th>Agent</th>
+                      <th>Status</th>
+                      <th>Picked Time</th>
+                    </tr>
+                  </thead>
+                  <tbody id="histBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ANALYTICS -->
+          <div class="panel" id="panel-analytics">
+            <div
+              style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+              <div>
+                <div style="font-size:15px;font-weight:600">Customer &amp; Agent Analytics</div>
+                <div style="font-size:12px;color:var(--muted)" id="analyticsScopeLabel">All-time performance, built from
+                  your daily History archives</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <select class="date-inp" id="analyticsScope" onchange="onAnalyticsScopeChange()">
+                  <option value="all">All Time</option>
+                  <option value="month" selected>Specific Month</option>
+                  <option value="range">Date Range</option>
+                </select>
+                <input type="month" class="date-inp" id="analyticsMonthPicker" style="display:none"
+                  onchange="loadAnalytics()">
+                <input type="date" class="date-inp" id="analyticsRangeStart" style="display:none"
+                  onchange="loadAnalytics()" title="Start date">
+                <input type="date" class="date-inp" id="analyticsRangeEnd" style="display:none"
+                  onchange="loadAnalytics()" title="End date">
+                <button class="topbar-btn secondary" onclick="loadAnalytics(true)">↻ Refresh</button>
+                <button class="topbar-btn secondary" onclick="exportAnalyticsToExcel()">⬇ Export Excel</button>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+              <button class="f-btn on" id="atab-customers" onclick="analyticsTab('customers',this)">👥
+                Customers</button>
+              <button class="f-btn off" id="atab-agents" onclick="analyticsTab('agents',this)">🚴 Agents</button>
+            </div>
+
+            <div id="analyticsErrorBox"
+              style="display:none;margin-bottom:16px;padding:14px;background:rgba(211,47,47,0.08);border:1px solid var(--red);border-radius:8px;font-size:13px;color:var(--red)">
+            </div>
+            <div id="analyticsLoading" style="display:none" class="empty-state">
+              <div class="empty-icon">📊</div>
+              <div class="empty-text">Crunching delivery history…</div>
+            </div>
+            <div class="tcard" style="padding:18px;margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="font-size:14px;font-weight:600">📈 Weekly Completion Rate</div>
+                <div style="font-size:11px;color:var(--muted)" id="weeklyChartRange"></div>
+              </div>
+              <canvas id="weeklyTrendChart" height="90"></canvas>
+            </div>
+            <!-- CUSTOMERS VIEW -->
+            <div id="analyticsCustomersView">
+              <div class="stat-grid" style="margin-bottom:16px">
+                <div class="stat-card total">
+                  <div class="stat-num orange" id="an_totalCust">0</div>
+                  <div class="stat-lbl">Customers Tracked</div>
+                </div>
+                <div class="stat-card pending">
+                  <div class="stat-num amber" id="an_totalDelayedFlag">0</div>
+                  <div class="stat-lbl" id="an_totalDelayedFlagLbl">Delay Flags (All Time)</div>
+                </div>
+                <div class="stat-card delayed">
+                  <div class="stat-num red" id="an_totalEndedDelayed">0</div>
+                  <div class="stat-lbl" id="an_totalEndedDelayedLbl">Ended Delayed (All Time)</div>
+                </div>
+                <div class="stat-card nobox">
+                  <div class="stat-num teal" id="an_totalNoboxReq">0</div>
+                  <div class="stat-lbl" id="an_totalNoboxReqLbl">No Box Requests (All Time)</div>
+                </div>
+              </div>
+              <div class="tcard">
+                <div class="tcard-head">
+                  <div class="tcard-title">Customer Breakdown <span
+                      style="font-weight:400;color:var(--muted);font-size:11px">— click a row for full detail</span>
+                  </div>
+                  <div class="tc-controls">
+                    <input class="search-box" id="analyticsCustSearch" placeholder="Search name, Box ID or zone..."
+                      oninput="drawAnalyticsCustomerTable()">
+                  </div>
+                </div>
+                <div style="overflow-x:auto">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Box ID</th>
+                        <th>Name</th>
+                        <th>Zone</th>
+                        <th>Total</th>
+                        <th>No Box (Agent)</th>
+                        <th>Times Delayed</th>
+                        <th>Ended Delayed</th>
+                        <th>No Box Requests</th>
+                      </tr>
+                    </thead>
+                    <tbody id="analyticsCustomerBody">
+                      <tr>
+                        <td colspan="9" class="empty-state">
+                          <div class="empty-text">Open this tab to load data</div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- AGENTS VIEW -->
+            <div id="analyticsAgentsView" style="display:none">
+              <div class="tcard">
+                <div class="tcard-head">
+                  <div class="tcard-title" id="analyticsAgentTitle">Agent Performance (All-Time) <span
+                      style="font-weight:400;color:var(--muted);font-size:11px">— click a row for full detail</span>
+                  </div>
+                </div>
+                <div style="overflow-x:auto">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Agent</th>
+                        <th>Zone</th>
+                        <th>Total Handled</th>
+                        <th>Completed</th>
+                        <th>Ended Delayed</th>
+                        <th>Completion Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody id="analyticsAgentBody">
+                      <tr>
+                        <td colspan="7" class="empty-state">
+                          <div class="empty-text">Open this tab to load data</div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RESET -->
+          <div class="panel" id="panel-reset">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+              <div class="tcard" style="padding:20px">
+                <div style="font-size:15px;font-weight:600;margin-bottom:6px">Customer PIN</div>
+
+                <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7">
+                  This 4-digit PIN is shared by all customers to log in to the customer app using their Box ID.
+                </div>
+                <div class="fg">
+                  <label>Global 4-Digit PIN</label>
+                  <input id="globalPinInp" type="tel" maxlength="4" inputmode="numeric" placeholder="e.g. 1234"
+                    oninput="this.value=this.value.replace(/\D/g,'')">
+                </div>
+                <button class="topbar-btn green-btn" onclick="saveGlobalPin()" style="width:100%">Save PIN</button>
+                <div id="pinSaveMsg"
+                  style="display:none;margin-top:8px;font-size:12px;color:var(--green);font-weight:600"></div>
+              </div>
+              <div class="tcard" style="padding:20px">
+                <details open>
+                  <summary style="cursor:pointer;font-size:13px;font-weight:600">ℹ️ About Box ID Login</summary>
+                  <div style="font-size:12px;color:var(--muted);line-height:2;margin-top:8px">
+                    Customers enter their unique Box ID (e.g. LB-001) + the global PIN to sign in.<br>
+                    No OTP or phone auth required.<br>
+                    Session stays active on their device until they sign out.<br>
+                    <span style="color:var(--amber);font-weight:600">Keep the PIN private — share it only with your
+                      customers.</span>
+                  </div>
+                </details>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="tcard" style="padding:20px">
+                <div style="font-size:15px;font-weight:600;margin-bottom:6px">Daily Delivery Reset</div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7">
+                  Archives today's active deliveries into permanent history and clears the deliveries table ready for
+                  tomorrow.
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+                  <div
+                    style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+                    <div id="rs_total" style="font-size:22px;font-weight:700;color:var(--accent)">0</div>
+                    <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Total</div>
+                  </div>
+                  <div
+                    style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+                    <div id="rs_rate" style="font-size:22px;font-weight:700;color:var(--green)">0%</div>
+                    <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Completed</div>
+                  </div>
+                </div>
+                <button class="topbar-btn" id="btnReset" onclick="triggerReset()" style="width:100%">Archive &amp; Reset
+                  for Tomorrow</button>
+                <div id="resetResultMsg"
+                  style="display:none;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;background:var(--greenbg);color:var(--green);border:1px solid var(--green)">
+                </div>
+              </div>
+              <div class="tcard" style="padding:20px">
+                <details>
+                  <summary style="cursor:pointer;font-size:15px;font-weight:600">What reset does</summary>
+                  <div style="font-size:12px;color:var(--muted);line-height:2;margin-top:8px">
+                    1. Copies all deliveries to history/{date}/<br>
+                    2. Writes completion summary stats<br>
+                    3. Deletes all from deliveries/ collection<br>
+                    4. Next morning → Auto Assign creates fresh routes<br>
+                    5. History stays until you archive/export it — see Analytics → Storage for free-tier limits
+                  </div>
+                </details>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      <!-- AGENTS VIEW -->
-      <div id="analyticsAgentsView" style="display:none">
-        <div class="tcard">
-          <div class="tcard-head"><div class="tcard-title" id="analyticsAgentTitle">Agent Performance (All-Time) <span style="font-weight:400;color:var(--muted);font-size:11px">— click a row for full detail</span></div></div>
-          <div style="overflow-x:auto"><table>
-            <thead><tr><th>#</th><th>Agent</th><th>Zone</th><th>Total Handled</th><th>Completed</th><th>Ended Delayed</th><th>Completion Rate</th></tr></thead>
-            <tbody id="analyticsAgentBody"><tr><td colspan="7" class="empty-state"><div class="empty-text">Open this tab to load data</div></td></tr></tbody>
-          </table></div>
+    </div><!-- /screen-dashboard -->
+
+    <!-- ══ MODALS ══ -->
+    <div class="modal-overlay" id="addDeliveryModal">
+      <div class="modal">
+        <div class="modal-h">
+          <h3>Add Delivery Manually</h3><span class="modal-cl" onclick="closeM('addDeliveryModal')">✕</span>
+        </div>
+        <div class="modal-b">
+          <div class="fg"><label for="dBx">Box ID (optional)</label><input id="dBx" placeholder="e.g. LB-001"
+              style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+          <div class="fr">
+            <div class="fg"><label for="dN">Customer Name</label><input id="dN"></div>
+            <div class="fg"><label for="dPh">Phone</label><input id="dPh"></div>
+          </div>
+          <div class="fg"><label for="dPk">Pickup Location</label><input id="dPk"></div>
+          <div class="fg"><label for="dAd">Delivery Address</label><input id="dAd"></div>
+          <div class="fr">
+            <div class="fg"><label for="dAg">Assign To Agent</label><select id="dAg">
+                <option value="">Select agent...</option>
+              </select></div>
+            <div class="fg"><label for="dIt">Item Count</label><input id="dIt" type="number" min="1" placeholder="1">
+            </div>
+          </div>
+          <div class="fg"><label for="dNo">Notes (optional)</label><input id="dNo"
+              placeholder="Special instructions..."></div>
+        </div>
+        <div class="modal-f"><button class="topbar-btn secondary"
+            onclick="closeM('addDeliveryModal')">Cancel</button><button class="topbar-btn" onclick="addDelivery()">Add
+            Delivery</button></div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="addCustomerModal">
+      <div class="modal">
+        <div class="modal-h">
+          <h3>Add Customer to Master List</h3><span class="modal-cl" onclick="closeM('addCustomerModal')">✕</span>
+        </div>
+        <div class="modal-b">
+          <div class="fr">
+            <div class="fg"><label for="cN">Full Name</label><input id="cN"></div>
+            <div class="fg"><label for="cPh">Phone</label><input id="cPh"></div>
+          </div>
+          <div class="fr">
+            <div class="fg"><label for="cBx">Box ID</label><input id="cBx" placeholder="e.g. LB-001"
+                style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"
+                onblur="liveCheckBoxId('cBx',null)">
+              <div id="cBxWarn" style="font-size:11px;color:var(--red);margin-top:4px;display:none"></div>
+            </div>
+            <div class="fg"><label for="cZn">Zone</label><input id="cZn" placeholder="north / south / east"></div>
+          </div>
+          <div class="fg"><label for="cPk">Pickup Location</label><input id="cPk"></div>
+          <div class="fg"><label for="cAd">Delivery Address</label><input id="cAd"></div>
+          <div class="fr">
+            <div class="fg"><label for="cAg">Preferred Agent</label><select id="cAg">
+                <option value="">Auto-assign</option>
+              </select></div>
+            <div class="fg"><label for="cNo">Notes</label><input id="cNo" placeholder="e.g. 2nd floor"></div>
+          </div>
+          <div class="info-box">Added to permanent master list. Auto Assign will include them every morning.</div>
+        </div>
+        <div class="modal-f"><button class="topbar-btn secondary"
+            onclick="closeM('addCustomerModal')">Cancel</button><button class="topbar-btn" onclick="addCustomer()">Add
+            Customer</button></div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="editCustomerModal">
+      <div class="modal">
+        <div class="modal-h">
+          <h3>Edit Customer</h3><span class="modal-cl" onclick="closeM('editCustomerModal')">✕</span>
+        </div>
+        <div class="modal-b">
+          <input type="hidden" id="ecId">
+          <div class="fr">
+            <div class="fg"><label for="ecN">Full Name</label><input id="ecN"></div>
+            <div class="fg"><label for="ecPh">Phone</label><input id="ecPh"></div>
+          </div>
+          <div class="fr">
+            <div class="fg"><label for="ecBx">Box ID</label><input id="ecBx" placeholder="e.g. LB-001"
+                style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"
+                onblur="liveCheckBoxId('ecBx',document.getElementById('ecId').value)">
+              <div id="ecBxWarn" style="font-size:11px;color:var(--red);margin-top:4px;display:none"></div>
+            </div>
+            <div class="fg"><label for="ecZn">Zone</label><input id="ecZn" placeholder="north / south / east"></div>
+          </div>
+          <div class="fg"><label for="ecPk">Pickup Location</label><input id="ecPk"></div>
+          <div class="fg"><label for="ecAd">Delivery Address</label><input id="ecAd"></div>
+          <div class="fr">
+            <div class="fg"><label for="ecAg">Preferred Agent</label><select id="ecAg">
+                <option value="">Auto-assign</option>
+              </select></div>
+            <div class="fg"><label for="ecNo">Notes</label><input id="ecNo" placeholder="e.g. 2nd floor"></div>
+          </div>
+          <div class="info-box">Changing "Preferred Agent" here only affects future Auto Assign runs — it won't move
+            today's already-created deliveries. Use Reassign in the Deliveries tab for that.</div>
+        </div>
+        <div class="modal-f"><button class="topbar-btn secondary"
+            onclick="closeM('editCustomerModal')">Cancel</button><button class="topbar-btn"
+            onclick="saveCustomerEdit()">Save Changes</button></div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="addAgentModal">
+      <div class="modal">
+        <div class="modal-h">
+          <h3>Add New Delivery Agent</h3><span class="modal-cl" onclick="closeM('addAgentModal')">✕</span>
+        </div>
+        <div class="modal-b">
+          <div class="fr">
+            <div class="fg"><label for="aN">Full Name</label><input id="aN"></div>
+            <div class="fg"><label for="aPh">Phone</label><input id="aPh"></div>
+          </div>
+          <div class="fg"><label for="aEm">Email (login to app)</label><input id="aEm" type="email"></div>
+          <div class="fr">
+            <div class="fg"><label for="aPw">Password (min 6 chars)</label><input id="aPw" type="password"></div>
+            <div class="fg"><label for="aZn">Zone</label><input id="aZn" placeholder="north / south"></div>
+          </div>
+          <div class="fg"><label for="aMx">Max Deliveries Per Day</label><input id="aMx" type="number" placeholder="30"
+              min="1"></div>
+        </div>
+        <div class="modal-f"><button class="topbar-btn secondary"
+            onclick="closeM('addAgentModal')">Cancel</button><button class="topbar-btn" id="createAgentBtn"
+            onclick="createAgent()">Create Agent</button></div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="editAgentModal">
+      <div class="modal">
+        <div class="modal-h">
+          <h3>Edit Agent</h3><span class="modal-cl" onclick="closeM('editAgentModal')">✕</span>
+        </div>
+        <div class="modal-b">
+          <input type="hidden" id="eaUid">
+          <div class="fr">
+            <div class="fg"><label for="eaN">Full Name</label><input id="eaN"></div>
+            <div class="fg"><label for="eaPh">Phone</label><input id="eaPh"></div>
+          </div>
+          <div class="fr">
+            <div class="fg"><label for="eaZn">Zone</label><input id="eaZn" placeholder="north / south"></div>
+            <div class="fg"><label for="eaMx">Max Deliveries Per Day</label><input id="eaMx" type="number" min="1">
+            </div>
+          </div>
+          <div class="fg"><label for="eaEm">Email (login) — read only</label><input id="eaEm" disabled
+              style="opacity:.6;cursor:not-allowed"></div>
+          <div class="info-box">Email and password can't be changed from here — those are Firebase Auth login
+            credentials, not part of this profile. Changing them requires the agent to reset their own password, or an
+            admin backend (Cloud Function).</div>
+        </div>
+        <div class="modal-f"><button class="topbar-btn secondary"
+            onclick="closeM('editAgentModal')">Cancel</button><button class="topbar-btn" onclick="saveAgentEdit()">Save
+            Changes</button></div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="broadcastConfirmModal">
+      <div class="modal">
+        <div class="modal-h">
+          <h3>Confirm Broadcast</h3><span class="modal-cl" onclick="closeM('broadcastConfirmModal')">✕</span>
+        </div>
+        <div class="modal-b">
+          <div style="text-align:center;font-size:36px;margin-bottom:12px">📣</div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:8px;text-align:center">Ready to send?</div>
+          <div id="broadcastConfirmDetails"
+            style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:16px;line-height:1.8"></div>
+          <div
+            style="background:var(--bg);border-radius:var(--r);padding:12px;font-size:12px;color:var(--text);margin-bottom:12px;border:1px solid var(--border)"
+            id="broadcastConfirmMsg"></div>
+          <div class="info-box" style="margin-bottom:0">This will use Twilio API and may incur charges. Standard
+            SMS/WhatsApp rates apply.</div>
+        </div>
+        <div class="modal-f"><button class="topbar-btn secondary"
+            onclick="closeM('broadcastConfirmModal')">Cancel</button><button class="topbar-btn purple-btn"
+            onclick="executeBroadcast()">Send Now →</button></div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="customerAnalyticsModal">
+      <div class="modal">
+        <div class="modal-h">
+          <h3 id="caTitle">Customer</h3><span class="modal-cl" onclick="closeM('customerAnalyticsModal')">✕</span>
+        </div>
+        <div class="modal-b" id="caBody"></div>
+        <div class="modal-f"><button class="topbar-btn secondary"
+            onclick="closeM('customerAnalyticsModal')">Close</button></div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="agentAnalyticsModal">
+      <div class="modal">
+        <div class="modal-h">
+          <h3 id="aaTitle">Agent</h3><span class="modal-cl" onclick="closeM('agentAnalyticsModal')">✕</span>
+        </div>
+        <div class="modal-b" id="aaBody"></div>
+        <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('agentAnalyticsModal')">Close</button>
         </div>
       </div>
     </div>
 
-    <!-- RESET -->
-    <div class="panel" id="panel-reset">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-        <div class="tcard" style="padding:20px">
-          <div style="font-size:15px;font-weight:600;margin-bottom:6px">Customer PIN</div>
+    <div class="toast" id="toast"></div>
 
-          <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7">
-            This 4-digit PIN is shared by all customers to log in to the customer app using their Box ID.
-          </div>
-          <div class="fg">
-            <label>Global 4-Digit PIN</label>
-            <input id="globalPinInp" type="tel" maxlength="4" inputmode="numeric" placeholder="e.g. 1234" oninput="this.value=this.value.replace(/\D/g,'')">
-          </div>
-          <button class="topbar-btn green-btn" onclick="saveGlobalPin()" style="width:100%">Save PIN</button>
-          <div id="pinSaveMsg" style="display:none;margin-top:8px;font-size:12px;color:var(--green);font-weight:600"></div>
-        </div>
-        <div class="tcard" style="padding:20px">
-          <details open>
-            <summary style="cursor:pointer;font-size:13px;font-weight:600">ℹ️ About Box ID Login</summary>
-            <div style="font-size:12px;color:var(--muted);line-height:2;margin-top:8px">
-              Customers enter their unique Box ID (e.g. LB-001) + the global PIN to sign in.<br>
-              No OTP or phone auth required.<br>
-              Session stays active on their device until they sign out.<br>
-              <span style="color:var(--amber);font-weight:600">Keep the PIN private — share it only with your customers.</span>
-            </div>
-          </details>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div class="tcard" style="padding:20px">
-          <div style="font-size:15px;font-weight:600;margin-bottom:6px">Daily Delivery Reset</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7">
-            Archives today's active deliveries into permanent history and clears the deliveries table ready for tomorrow.
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-            <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
-              <div id="rs_total" style="font-size:22px;font-weight:700;color:var(--accent)">0</div>
-              <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Total</div>
-            </div>
-            <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
-              <div id="rs_rate" style="font-size:22px;font-weight:700;color:var(--green)">0%</div>
-              <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Completed</div>
-            </div>
-          </div>
-          <button class="topbar-btn" id="btnReset" onclick="triggerReset()" style="width:100%">Archive &amp; Reset for Tomorrow</button>
-          <div id="resetResultMsg" style="display:none;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;background:var(--greenbg);color:var(--green);border:1px solid var(--green)"></div>
-        </div>
-        <div class="tcard" style="padding:20px">
-          <details>
-            <summary style="cursor:pointer;font-size:15px;font-weight:600">What reset does</summary>
-            <div style="font-size:12px;color:var(--muted);line-height:2;margin-top:8px">
-              1. Copies all deliveries to history/{date}/<br>
-              2. Writes completion summary stats<br>
-              3. Deletes all from deliveries/ collection<br>
-              4. Next morning → Auto Assign creates fresh routes<br>
-              5. History stays until you archive/export it — see Analytics → Storage for free-tier limits
-            </div>
-          </details>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-</div><!-- /screen-dashboard -->
-
-<!-- ══ MODALS ══ -->
-<div class="modal-overlay" id="addDeliveryModal">
-  <div class="modal">
-    <div class="modal-h"><h3>Add Delivery Manually</h3><span class="modal-cl" onclick="closeM('addDeliveryModal')">✕</span></div>
-    <div class="modal-b">
-      <div class="fg"><label for="dBx">Box ID (optional)</label><input id="dBx" placeholder="e.g. LB-001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="fr"><div class="fg"><label for="dN">Customer Name</label><input id="dN"></div><div class="fg"><label for="dPh">Phone</label><input id="dPh"></div></div>
-      <div class="fg"><label for="dPk">Pickup Location</label><input id="dPk"></div>
-      <div class="fg"><label for="dAd">Delivery Address</label><input id="dAd"></div>
-      <div class="fr"><div class="fg"><label for="dAg">Assign To Agent</label><select id="dAg"><option value="">Select agent...</option></select></div><div class="fg"><label for="dIt">Item Count</label><input id="dIt" type="number" min="1" placeholder="1"></div></div>
-      <div class="fg"><label for="dNo">Notes (optional)</label><input id="dNo" placeholder="Special instructions..."></div>
-    </div>
-    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('addDeliveryModal')">Cancel</button><button class="topbar-btn" onclick="addDelivery()">Add Delivery</button></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="addCustomerModal">
-  <div class="modal">
-    <div class="modal-h"><h3>Add Customer to Master List</h3><span class="modal-cl" onclick="closeM('addCustomerModal')">✕</span></div>
-    <div class="modal-b">
-      <div class="fr"><div class="fg"><label for="cN">Full Name</label><input id="cN"></div><div class="fg"><label for="cPh">Phone</label><input id="cPh"></div></div>
-      <div class="fr"><div class="fg"><label for="cBx">Box ID</label><input id="cBx" placeholder="e.g. LB-001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="liveCheckBoxId('cBx',null)"><div id="cBxWarn" style="font-size:11px;color:var(--red);margin-top:4px;display:none"></div></div><div class="fg"><label for="cZn">Zone</label><input id="cZn" placeholder="north / south / east"></div></div>
-      <div class="fg"><label for="cPk">Pickup Location</label><input id="cPk"></div>
-      <div class="fg"><label for="cAd">Delivery Address</label><input id="cAd"></div>
-      <div class="fr"><div class="fg"><label for="cAg">Preferred Agent</label><select id="cAg"><option value="">Auto-assign</option></select></div><div class="fg"><label for="cNo">Notes</label><input id="cNo" placeholder="e.g. 2nd floor"></div></div>
-      <div class="info-box">Added to permanent master list. Auto Assign will include them every morning.</div>
-    </div>
-    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('addCustomerModal')">Cancel</button><button class="topbar-btn" onclick="addCustomer()">Add Customer</button></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="editCustomerModal">
-  <div class="modal">
-    <div class="modal-h"><h3>Edit Customer</h3><span class="modal-cl" onclick="closeM('editCustomerModal')">✕</span></div>
-    <div class="modal-b">
-      <input type="hidden" id="ecId">
-      <div class="fr"><div class="fg"><label for="ecN">Full Name</label><input id="ecN"></div><div class="fg"><label for="ecPh">Phone</label><input id="ecPh"></div></div>
-      <div class="fr"><div class="fg"><label for="ecBx">Box ID</label><input id="ecBx" placeholder="e.g. LB-001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="liveCheckBoxId('ecBx',document.getElementById('ecId').value)"><div id="ecBxWarn" style="font-size:11px;color:var(--red);margin-top:4px;display:none"></div></div><div class="fg"><label for="ecZn">Zone</label><input id="ecZn" placeholder="north / south / east"></div></div>
-      <div class="fg"><label for="ecPk">Pickup Location</label><input id="ecPk"></div>
-      <div class="fg"><label for="ecAd">Delivery Address</label><input id="ecAd"></div>
-      <div class="fr"><div class="fg"><label for="ecAg">Preferred Agent</label><select id="ecAg"><option value="">Auto-assign</option></select></div><div class="fg"><label for="ecNo">Notes</label><input id="ecNo" placeholder="e.g. 2nd floor"></div></div>
-      <div class="info-box">Changing "Preferred Agent" here only affects future Auto Assign runs — it won't move today's already-created deliveries. Use Reassign in the Deliveries tab for that.</div>
-    </div>
-    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('editCustomerModal')">Cancel</button><button class="topbar-btn" onclick="saveCustomerEdit()">Save Changes</button></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="addAgentModal">
-  <div class="modal">
-    <div class="modal-h"><h3>Add New Delivery Agent</h3><span class="modal-cl" onclick="closeM('addAgentModal')">✕</span></div>
-    <div class="modal-b">
-      <div class="fr"><div class="fg"><label for="aN">Full Name</label><input id="aN"></div><div class="fg"><label for="aPh">Phone</label><input id="aPh"></div></div>
-      <div class="fg"><label for="aEm">Email (login to app)</label><input id="aEm" type="email"></div>
-      <div class="fr"><div class="fg"><label for="aPw">Password (min 6 chars)</label><input id="aPw" type="password"></div><div class="fg"><label for="aZn">Zone</label><input id="aZn" placeholder="north / south"></div></div>
-      <div class="fg"><label for="aMx">Max Deliveries Per Day</label><input id="aMx" type="number" placeholder="30" min="1"></div>
-    </div>
-    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('addAgentModal')">Cancel</button><button class="topbar-btn" id="createAgentBtn" onclick="createAgent()">Create Agent</button></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="editAgentModal">
-  <div class="modal">
-    <div class="modal-h"><h3>Edit Agent</h3><span class="modal-cl" onclick="closeM('editAgentModal')">✕</span></div>
-    <div class="modal-b">
-      <input type="hidden" id="eaUid">
-      <div class="fr"><div class="fg"><label for="eaN">Full Name</label><input id="eaN"></div><div class="fg"><label for="eaPh">Phone</label><input id="eaPh"></div></div>
-      <div class="fr"><div class="fg"><label for="eaZn">Zone</label><input id="eaZn" placeholder="north / south"></div><div class="fg"><label for="eaMx">Max Deliveries Per Day</label><input id="eaMx" type="number" min="1"></div></div>
-      <div class="fg"><label for="eaEm">Email (login) — read only</label><input id="eaEm" disabled style="opacity:.6;cursor:not-allowed"></div>
-      <div class="info-box">Email and password can't be changed from here — those are Firebase Auth login credentials, not part of this profile. Changing them requires the agent to reset their own password, or an admin backend (Cloud Function).</div>
-    </div>
-    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('editAgentModal')">Cancel</button><button class="topbar-btn" onclick="saveAgentEdit()">Save Changes</button></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="broadcastConfirmModal">
-  <div class="modal">
-    <div class="modal-h"><h3>Confirm Broadcast</h3><span class="modal-cl" onclick="closeM('broadcastConfirmModal')">✕</span></div>
-    <div class="modal-b">
-      <div style="text-align:center;font-size:36px;margin-bottom:12px">📣</div>
-      <div style="font-size:14px;font-weight:600;margin-bottom:8px;text-align:center">Ready to send?</div>
-      <div id="broadcastConfirmDetails" style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:16px;line-height:1.8"></div>
-      <div style="background:var(--bg);border-radius:var(--r);padding:12px;font-size:12px;color:var(--text);margin-bottom:12px;border:1px solid var(--border)" id="broadcastConfirmMsg"></div>
-      <div class="info-box" style="margin-bottom:0">This will use Twilio API and may incur charges. Standard SMS/WhatsApp rates apply.</div>
-    </div>
-    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('broadcastConfirmModal')">Cancel</button><button class="topbar-btn purple-btn" onclick="executeBroadcast()">Send Now →</button></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="customerAnalyticsModal">
-  <div class="modal">
-    <div class="modal-h"><h3 id="caTitle">Customer</h3><span class="modal-cl" onclick="closeM('customerAnalyticsModal')">✕</span></div>
-    <div class="modal-b" id="caBody"></div>
-    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('customerAnalyticsModal')">Close</button></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="agentAnalyticsModal">
-  <div class="modal">
-    <div class="modal-h"><h3 id="aaTitle">Agent</h3><span class="modal-cl" onclick="closeM('agentAnalyticsModal')">✕</span></div>
-    <div class="modal-b" id="aaBody"></div>
-    <div class="modal-f"><button class="topbar-btn secondary" onclick="closeM('agentAnalyticsModal')">Close</button></div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<!-- JS Modules -->
-<script src="project/js/firebase-init.js"></script>
-<script src="project/js/ui.js"></script>
-<script src="project/js/deliveries.js"></script>
-<script src="project/js/agents.js"></script>
-<script src="project/js/customers.js"></script>
-<script src="project/js/assign.js"></script>
-<script src="project/js/inbox.js"></script>
-<script src="project/js/nobox.js"></script>
-<script src="project/js/broadcast.js"></script>
-<script src="project/js/history.js"></script>
-<script src="project/js/analytics.js"></script>
-<script src="project/js/export.js"></script>
+    <!-- JS Modules -->
+    <script src="project/js/firebase-init.js"></script>
+    <script src="project/js/ui.js"></script>
+    <script src="project/js/deliveries.js"></script>
+    <script src="project/js/agents.js"></script>
+    <script src="project/js/customers.js"></script>
+    <script src="project/js/assign.js"></script>
+    <script src="project/js/inbox.js"></script>
+    <script src="project/js/nobox.js"></script>
+    <script src="project/js/broadcast.js"></script>
+    <script src="project/js/history.js"></script>
+    <script src="project/js/analytics.js"></script>
+    <script src="project/js/export.js"></script>
 </body>
+
 </html>
