@@ -7,6 +7,42 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Holds the full loaded rows so filterHistoryTable can refilter without re-fetching
 let _histRows = [];
 
+let _holidayCache = {}; // year -> { "YYYY-MM-DD": "Name" }
+
+async function fetchIndianHolidays(year) {
+    if (_holidayCache[year]) return _holidayCache[year];
+    const cacheKey = `lb_api_holidays_${year}`;
+    try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            _holidayCache[year] = JSON.parse(cached);
+            return _holidayCache[year];
+        }
+    } catch (e) {
+        console.warn('LocalStorage access failed:', e);
+    }
+
+    try {
+        const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/IN`);
+        if (!res.ok) throw new Error('API request failed');
+        const list = await res.json();
+        const map = {};
+        list.forEach(h => {
+            map[h.date] = h.name || h.localName;
+        });
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(map));
+        } catch (e) {
+            console.warn('Failed to save to localStorage:', e);
+        }
+        _holidayCache[year] = map;
+        return map;
+    } catch (e) {
+        console.error(`Failed to fetch Indian holidays for year ${year}:`, e);
+        return {};
+    }
+}
+
 async function loadHistoryV2() {
     const dt = document.getElementById('histDate')?.value;
     if (!dt) { toast('Select a date first', 'err'); return; }
@@ -14,6 +50,23 @@ async function loadHistoryV2() {
     if (body) body.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-text">Loading...</div></td></tr>';
     const summaryEl = document.getElementById('historySummary');
     if (summaryEl) summaryEl.style.display = 'none';
+
+    // Fetch holidays for the selected year
+    const year = dt.split('-')[0];
+    const holidays = await fetchIndianHolidays(year);
+    const holidayName = holidays[dt];
+
+    // Update holiday banner visibility
+    const banner = document.getElementById('histHolidayBanner');
+    const nameEl = document.getElementById('histHolidayName');
+    if (banner) {
+        if (holidayName) {
+            if (nameEl) nameEl.textContent = holidayName;
+            banner.style.display = 'flex';
+        } else {
+            banner.style.display = 'none';
+        }
+    }
 
     const { data: rows, error } = await sb
         .from('archived_deliveries')
@@ -27,7 +80,13 @@ async function loadHistoryV2() {
     }
 
     if (!rows || !rows.length) {
-        if (body) body.innerHTML = `<tr><td colspan="6" class="empty-state"><div class="empty-icon">🗂</div><div class="empty-text">No deliveries archived for ${dt}</div></td></tr>`;
+        if (body) {
+            if (holidayName) {
+                body.innerHTML = `<tr><td colspan="6" class="empty-state" style="padding:40px 20px"><div class="empty-icon" style="font-size:36px">🎉</div><div class="empty-text" style="font-weight:600;color:var(--amber);font-size:14px;margin-top:8px">${holidayName}</div><div class="empty-text" style="font-size:12px;color:var(--muted);margin-top:4px">This day was a Public Holiday. No deliveries were scheduled.</div></td></tr>`;
+            } else {
+                body.innerHTML = `<tr><td colspan="6" class="empty-state"><div class="empty-icon">🗂</div><div class="empty-text">No deliveries archived for ${dt}</div></td></tr>`;
+            }
+        }
         return;
     }
 
@@ -120,69 +179,43 @@ function _renderHistoryRows(rows, statusFilter) {
     }).join('');
 }
 
-// ══ HOLIDAY MANAGER ══
-// Holidays stored in localStorage so they persist across sessions without a backend.
-// Format: { "2026-08-15": "Independence Day", "2026-10-02": "Gandhi Jayanti" }
+// ══ HOLIDAY LIST RENDERING FOR COLLAPSIBLE VIEW ══
+async function loadYearHolidays() {
+    const dt = document.getElementById('histDate')?.value || today;
+    const year = dt.split('-')[0];
+    const yrLabel = document.getElementById('holidayYearLabel');
+    if (yrLabel) yrLabel.textContent = year;
 
-function _getHolidays() {
-    try { return JSON.parse(localStorage.getItem('lb_holidays') || '{}'); }
-    catch { return {}; }
-}
-
-function _saveHolidays(h) {
-    localStorage.setItem('lb_holidays', JSON.stringify(h));
-}
-
-function addHoliday() {
-    const dt   = document.getElementById('holidayDateInp')?.value;
-    const name = (document.getElementById('holidayNameInp')?.value || '').trim();
-    if (!dt)   { toast('Select a date for the holiday', 'err'); return; }
-    if (!name) { toast('Enter a holiday name', 'err'); return; }
-    const h = _getHolidays();
-    h[dt] = name;
-    _saveHolidays(h);
-    renderHolidayList();
-    document.getElementById('holidayDateInp').value  = '';
-    document.getElementById('holidayNameInp').value  = '';
-    toast('Holiday added: ' + name, 'ok');
-    // If the current histDate matches, show the banner immediately
-    _checkHolidayBanner();
-}
-
-function removeHoliday(dt) {
-    const h = _getHolidays();
-    delete h[dt];
-    _saveHolidays(h);
-    renderHolidayList();
-    _checkHolidayBanner();
-    toast('Holiday removed', 'ok');
-}
-
-function renderHolidayList() {
     const el = document.getElementById('holidayList');
     if (!el) return;
-    const h = _getHolidays();
+    el.innerHTML = '<span style="font-size:11px;color:var(--muted)">Loading holidays for ' + year + '...</span>';
+
+    const h = await fetchIndianHolidays(year);
     const entries = Object.entries(h).sort(([a], [b]) => a.localeCompare(b));
     if (!entries.length) {
-        el.innerHTML = '<span style="font-size:11px;color:var(--muted)">No holidays added yet</span>';
+        el.innerHTML = '<span style="font-size:11px;color:var(--muted)">No public holidays found for ' + year + '</span>';
         return;
     }
-    el.innerHTML = entries.map(([dt, name]) =>
-        `<span style="display:inline-flex;align-items:center;gap:5px;background:var(--amberbg);border:1px solid var(--amber);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--amber)">
-            🎉 ${name} <span style="font-weight:400;color:var(--muted)">${dt}</span>
-            <span onclick="removeHoliday('${dt}')" style="cursor:pointer;color:var(--red);font-weight:700;margin-left:2px" title="Remove">✕</span>
-         </span>`
-    ).join('');
+
+    el.innerHTML = entries.map(([d, name]) => {
+        const isSelected = d === dt;
+        const style = isSelected ? ';background:var(--accentbg);border-color:var(--accent);color:var(--accent)' : '';
+        return `<span style="display:inline-flex;align-items:center;gap:5px;background:var(--amberbg);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--amber)${style}">
+            🎉 ${name} <span style="font-weight:400;color:var(--muted)">${d}</span>
+         </span>`;
+    }).join('');
 }
 
-function _checkHolidayBanner() {
-    const dt      = document.getElementById('histDate')?.value;
-    const banner  = document.getElementById('histHolidayBanner');
-    const nameEl  = document.getElementById('histHolidayName');
+async function _checkHolidayBanner() {
+    const dt = document.getElementById('histDate')?.value;
+    const banner = document.getElementById('histHolidayBanner');
+    const nameEl = document.getElementById('histHolidayName');
     if (!banner) return;
-    const h = _getHolidays();
-    if (dt && h[dt]) {
-        if (nameEl) nameEl.textContent = h[dt];
+    if (!dt) { banner.style.display = 'none'; return; }
+    const year = dt.split('-')[0];
+    const holidays = await fetchIndianHolidays(year);
+    if (holidays[dt]) {
+        if (nameEl) nameEl.textContent = holidays[dt];
         banner.style.display = 'flex';
     } else {
         banner.style.display = 'none';
@@ -193,5 +226,5 @@ function _checkHolidayBanner() {
 document.addEventListener('DOMContentLoaded', () => {
     const inp = document.getElementById('histDate');
     if (inp) inp.addEventListener('change', _checkHolidayBanner);
-    renderHolidayList();
+    _checkHolidayBanner();
 });
