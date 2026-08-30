@@ -24,7 +24,7 @@ function onAnalyticsScopeChange() {
     if (rangeStart && !rangeStart.value) rangeStart.value = today;
     if (rangeEnd && !rangeEnd.value) rangeEnd.value = today;
   }
-  loadAnalytics();
+  loadAnalyticsV2();
 }
 
 let historyCache = null;

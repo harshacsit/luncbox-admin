@@ -9,6 +9,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
+
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -744,7 +745,7 @@
                   <select class="date-inp" id="histAgentFilter" style="width:150px">
                     <option value="">All Agents</option>
                   </select>
-                  <button class="topbar-btn" onclick="loadHistory()">Load</button>
+                  <button class="topbar-btn" onclick="loadHistoryV2()">Load</button>
                   <button class="topbar-btn purple-btn"
                     onclick="nav('analytics', document.getElementById('navItemAnalytics'))">📈 Analytics</button>
                 </div>
@@ -1208,6 +1209,7 @@
     <div class="toast" id="toast"></div>
 
     <!-- JS Modules -->
+   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="project/js/firebase-init.js"></script>
     <script src="project/js/ui.js"></script>
     <script src="project/js/deliveries.js"></script>
@@ -1218,7 +1220,9 @@
     <script src="project/js/nobox.js"></script>
     <script src="project/js/broadcast.js"></script>
     <script src="project/js/history.js"></script>
+    <script src="project/js/history_v2.js"></script>
     <script src="project/js/analytics.js"></script>
+    <script src="project/js/analytics_v2.js"></script>
     <script src="project/js/export.js"></script>
 </body>
 

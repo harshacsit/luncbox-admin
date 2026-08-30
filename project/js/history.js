@@ -93,6 +93,9 @@ async function archiveDeliveries(includeToday) {
     groups[date].push(doc);
   });
 
+  const currentUser = firebase.auth().currentUser;
+  if (!currentUser) throw new Error('You must be signed in to archive deliveries.');
+  const token = await currentUser.getIdToken();
   const archivedDates = [];
   let archivedCount = 0;
 
@@ -105,32 +108,77 @@ async function archiveDeliveries(includeToday) {
       else pnd++;
     });
 
-    // Merge with any existing summary for that date, in case it was
-    // already partially archived earlier
-    const summaryRef = db.doc('history/' + date + '/summary/stats');
-    const existing = await summaryRef.get().catch(() => null);
-    const prev = (existing && existing.exists) ? existing.data() : {};
-    const totalDeliveries = (prev.totalDeliveries || 0) + docs.length;
-    const delivered = (prev.delivered || 0) + del;
-    const delayed = (prev.delayed || 0) + dly;
-    const pending = (prev.pending || 0) + pnd;
+    const totalDeliveries = docs.length;
+    const delivered = del;
+    const delayed = dly;
+    const pending = pnd;
     const completionRate = totalDeliveries > 0 ? Math.round((delivered * 100) / totalDeliveries) : 0;
 
+    const payload = {
+      date,
+      summary: {
+        totalDeliveries,
+        delivered,
+        delayed,
+        pending,
+        completionRate,
+        archivedAt: Date.now()
+      },
+      deliveries: docs.map(doc => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          customerId: d.customerId || '',
+          customerName: d.customerName || '',
+          customerPhone: d.customerPhone || '',
+          boxId: d.boxId || '',
+          pickupLocation: d.pickupLocation || '',
+          deliveryAddress: d.deliveryAddress || '',
+          assignedTo: d.assignedTo || '',
+          assignedName: d.assignedName || '',
+          agentPhone: d.agentPhone || '',
+          status: d.status || 'Pending',
+          wasDelayed: !!d.wasDelayed,
+          pickupOrder: d.pickupOrder || null,
+          itemCount: d.itemCount || 1,
+          notes: d.notes || '',
+          deliveryDate: d.deliveryDate || date,
+          pickedAt: d.pickedAt || null,
+          timestamp: d.timestamp || Date.now(),
+          archivedAt: Date.now()
+        };
+      })
+    };
+
+    // Call Netlify function to sync to Supabase
+    const res = await fetch('/.netlify/functions/sync-history', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Failed to sync date ${date} to Supabase`);
+    }
+
+    // After successful sync, delete from Firestore
     let batch = db.batch(), ops = 0;
     for (const doc of docs) {
-      batch.set(db.doc('history/' + date + '/deliveries/' + doc.id), { ...doc.data(), archiveDate: date, archivedAt: Date.now() });
       batch.delete(doc.ref);
-      ops += 2;
+      ops++;
       if (ops >= 480) { await batch.commit(); batch = db.batch(); ops = 0; }
     }
-    batch.set(summaryRef, { date, totalDeliveries, delivered, delayed, pending, completionRate, archivedAt: Date.now() }, { merge: true });
     await batch.commit();
 
     archivedDates.push(date);
     archivedCount += docs.length;
   }
 
-  historyCache = null; // invalidate so Analytics re-fetches fresh data
+  analyticsLoaded = false; // invalidate cache so Analytics re-fetches from Supabase
   return { archivedDates, archivedCount };
 }
 async function triggerReset(auto) {

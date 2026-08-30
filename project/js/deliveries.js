@@ -5,7 +5,7 @@ function listenDeliveries() {
     allDeliveries = [];
     snap.forEach(doc => { const d = doc.data(); d.id = doc.id; allDeliveries.push(d); });
     allDeliveries.sort((a, b) => (a.pickupOrder || 999) - (b.pickupOrder || 999));
-    updateStats(); renderDeliveries(); renderDelayed(); renderAgentLoad(); renderRecentActivity(); renderStatusBreakdownChart();
+    updateStats(); renderDeliveries(); renderDelayed(); renderAgentLoad(); renderRecentActivity();
   }, e => toast('Listener error: ' + e.message, 'err'));
 }
 
