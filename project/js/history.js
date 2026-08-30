@@ -185,10 +185,27 @@ async function triggerReset(auto) {
   if (auto) return; // All automatic daily resets have been stopped
   const btn = document.getElementById('btnReset');
   if (btn) btn.disabled = true;
-  if (!(await askConfirm('Archive all current deliveries and clear the list for tomorrow?', {title:'Daily Reset?', confirmLabel:'Archive & Reset', danger:true}))) {
-    if (btn) btn.disabled = false;
-    return;
+
+  // ── DELIVERY HOURS GUARD ── (10:30 AM – 1:00 PM)
+  const _now = new Date();
+  const hour = _now.getHours(), min = _now.getMinutes();
+  const isDuringDeliveries = (hour === 10 && min >= 30) || hour === 11 || hour === 12;
+  if (isDuringDeliveries) {
+    const nowStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const proceed = await askConfirm(
+      `⚠️ It is currently ${nowStr} — agents may be actively delivering right now.\n\nResetting mid-delivery will permanently archive unfinished deliveries.\n\nAre you SURE this is the right time to reset?`,
+      { title: '⛔ Deliveries Are In Progress!', confirmLabel: 'Yes, I understand the risk', danger: true }
+    );
+    if (!proceed) { if (btn) btn.disabled = false; return; }
   }
+
+  // ── SECOND CONFIRMATION ── (always required)
+  const ok = await askConfirm(
+    `This will archive ALL current deliveries to Supabase history and completely clear the delivery list.\n\nThis action cannot be undone.\n\nConfirm to proceed.`,
+    { title: 'Final Confirmation — Archive & Reset?', confirmLabel: '✅ Archive & Reset Now', danger: true }
+  );
+  if (!ok) { if (btn) btn.disabled = false; return; }
+
   if (btn) btn.textContent = 'Archiving...';
   try {
     const result = await archiveDeliveries(true); // true = archive everything, including today's

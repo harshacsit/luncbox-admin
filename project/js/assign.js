@@ -21,7 +21,25 @@ async function runAssign(auto) {
   if (!Object.keys(agents).length) { toast('No agents found', 'err'); return; }
   const btn = document.querySelector('#panel-assign .topbar-btn.green-btn');
   if (btn) btn.disabled = true;
-  if (!(await askConfirm('Assign today\'s deliveries to all agents?', {title:'Assign Today\'s Routes?', confirmLabel:'Assign', danger:false}))) {
+
+  // ── DELIVERY HOURS GUARD ── (10:30 AM – 1:00 PM)
+  const _now = new Date();
+  const hour = _now.getHours(), min = _now.getMinutes();
+  const isDuringDeliveries = (hour === 10 && min >= 30) || hour === 11 || hour === 12;
+  if (isDuringDeliveries) {
+    const nowStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const proceed = await askConfirm(
+      `⚠️ It is currently ${nowStr} — agents may already be delivering.\n\nRunning Assign mid-delivery will create duplicate routes or overwrite active deliveries.\n\nAre you SURE you want to assign routes right now?`,
+      { title: '⛔ Deliveries Are In Progress!', confirmLabel: 'Yes, I understand the risk', danger: true }
+    );
+    if (!proceed) { if (btn) btn.disabled = false; return; }
+  }
+
+  // ── SECOND CONFIRMATION ── (always required)
+  if (!(await askConfirm(
+    `This will assign today's deliveries to all agents.\n\nAgents will immediately see their routes on the app.\n\nProceed?`,
+    { title: 'Confirm: Assign Today\'s Routes?', confirmLabel: '✅ Yes, Assign Routes', danger: false }
+  ))) {
     if (btn) btn.disabled = false;
     return;
   }
@@ -60,8 +78,18 @@ try {
         if (btn) { btn.disabled = false; btn.textContent = '🚀 Assign Today\'s Routes'; }
         return;
       }
-      const ok = await askConfirm(`Deliveries for today already exist.\n\nDelete and reassign fresh?`, {title:'Reassign Today\'s Deliveries?', confirmLabel:'Delete & Reassign', danger:true});
-      if (!ok) { if (progEl) progEl.style.display = 'none'; if (btn) { btn.disabled = false; btn.textContent = '🚀 Assign Today\'s Routes'; } return; }
+      // ── DELETE & REASSIGN: double confirmation ── (most dangerous action)
+      const ok1 = await askConfirm(
+        `⚠️ Today's deliveries already exist.\n\nDeleting and reassigning will ERASE all current delivery progress (Picked, Delivered, Delayed statuses).\n\nThis cannot be undone.`,
+        { title: '⛔ Overwrite Active Deliveries?', confirmLabel: 'Continue to final confirm', danger: true }
+      );
+      if (!ok1) { if (progEl) progEl.style.display = 'none'; if (btn) { btn.disabled = false; btn.textContent = '🚀 Assign Today\'s Routes'; } return; }
+
+      const ok2 = await askConfirm(
+        `FINAL WARNING: All delivery progress from today will be permanently lost.\n\nAre you absolutely sure you want to delete and reassign?`,
+        { title: '❗ Final Confirmation — Delete & Reassign?', confirmLabel: '❌ Delete All & Reassign', danger: true }
+      );
+      if (!ok2) { if (progEl) progEl.style.display = 'none'; if (btn) { btn.disabled = false; btn.textContent = '🚀 Assign Today\'s Routes'; } return; }
       const allToday = await db.collection('deliveries').where('deliveryDate', '==', today).get();
       const delBatch = db.batch(); allToday.forEach(d => delBatch.delete(d.ref)); await delBatch.commit();
     }
