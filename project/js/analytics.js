@@ -61,7 +61,6 @@ async function loadHistoryForScope(scope, start, end) {
 async function loadAnalytics(forceRefresh) {
   return loadAnalyticsV2(forceRefresh);
 }
-}
 
 function drawAnalyticsCustomerTable() {
   const q = (document.getElementById('analyticsCustSearch')?.value || '').toLowerCase();
