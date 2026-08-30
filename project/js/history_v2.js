@@ -7,40 +7,70 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Holds the full loaded rows so filterHistoryTable can refilter without re-fetching
 let _histRows = [];
 
-let _holidayCache = {}; // year -> { "YYYY-MM-DD": "Name" }
+const INDIAN_HOLIDAYS = {
+  // 2025
+  "2025-01-26": "Republic Day",
+  "2025-02-26": "Maha Shivratri",
+  "2025-03-14": "Holi",
+  "2025-03-31": "Id-ul-Fitr (Eid)",
+  "2025-04-10": "Mahavir Jayanti",
+  "2025-04-18": "Good Friday",
+  "2025-05-12": "Buddha Purnima",
+  "2025-06-07": "Bakrid / Eid al-Adha",
+  "2025-07-06": "Muharram",
+  "2025-08-15": "Independence Day",
+  "2025-09-05": "Milad-un-Nabi",
+  "2025-10-02": "Mahatma Gandhi Jayanti",
+  "2025-10-20": "Diwali (Deepavali)",
+  "2025-11-05": "Guru Nanak Jayanti",
+  "2025-12-25": "Christmas Day",
+
+  // 2026
+  "2026-01-26": "Republic Day",
+  "2026-02-15": "Maha Shivratri",
+  "2026-03-03": "Holi",
+  "2026-03-21": "Id-ul-Fitr (Eid)",
+  "2026-03-31": "Mahavir Jayanti",
+  "2026-04-03": "Good Friday",
+  "2026-05-01": "Buddha Purnima",
+  "2026-05-27": "Id-ul-Zuha (Bakri-id)",
+  "2026-06-26": "Muharram",
+  "2026-08-15": "Independence Day",
+  "2026-08-26": "Milad-un-Nabi / Id-e-Milad",
+  "2026-10-02": "Mahatma Gandhi Jayanti",
+  "2026-10-20": "Dussehra (Vijayadashami)",
+  "2026-11-08": "Diwali (Deepavali)",
+  "2026-11-24": "Guru Nanak Jayanti",
+  "2026-12-25": "Christmas Day",
+
+  // 2027
+  "2027-01-26": "Republic Day",
+  "2027-03-08": "Maha Shivratri",
+  "2027-03-22": "Holi",
+  "2027-03-10": "Id-ul-Fitr (Eid)",
+  "2027-03-26": "Good Friday",
+  "2027-04-19": "Mahavir Jayanti",
+  "2027-05-20": "Buddha Purnima",
+  "2027-08-15": "Independence Day",
+  "2027-10-02": "Mahatma Gandhi Jayanti",
+  "2027-10-09": "Dussehra (Vijayadashami)",
+  "2027-10-29": "Diwali (Deepavali)",
+  "2027-11-13": "Guru Nanak Jayanti",
+  "2027-12-25": "Christmas Day"
+};
 
 async function fetchIndianHolidays(year) {
-    if (_holidayCache[year]) return _holidayCache[year];
-    const cacheKey = `lb_api_holidays_${year}`;
+    const yearHolidays = {};
+    Object.entries(INDIAN_HOLIDAYS).forEach(([d, name]) => {
+        if (d.startsWith(year)) yearHolidays[d] = name;
+    });
     try {
-        const cached = localStorage.getItem(cacheKey);
-        if (cached) {
-            _holidayCache[year] = JSON.parse(cached);
-            return _holidayCache[year];
-        }
-    } catch (e) {
-        console.warn('LocalStorage access failed:', e);
-    }
-
-    try {
-        const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/IN`);
-        if (!res.ok) throw new Error('API request failed');
-        const list = await res.json();
-        const map = {};
-        list.forEach(h => {
-            map[h.date] = h.name || h.localName;
+        const custom = JSON.parse(localStorage.getItem('lb_custom_holidays') || '{}');
+        Object.entries(custom).forEach(([d, name]) => {
+            if (d.startsWith(year)) yearHolidays[d] = name;
         });
-        try {
-            localStorage.setItem(cacheKey, JSON.stringify(map));
-        } catch (e) {
-            console.warn('Failed to save to localStorage:', e);
-        }
-        _holidayCache[year] = map;
-        return map;
-    } catch (e) {
-        console.error(`Failed to fetch Indian holidays for year ${year}:`, e);
-        return {};
-    }
+    } catch (e) {}
+    return yearHolidays;
 }
 
 async function loadHistoryV2() {
@@ -56,18 +86,6 @@ async function loadHistoryV2() {
     const holidays = await fetchIndianHolidays(year);
     const holidayName = holidays[dt];
 
-    // Update holiday banner visibility
-    const banner = document.getElementById('histHolidayBanner');
-    const nameEl = document.getElementById('histHolidayName');
-    if (banner) {
-        if (holidayName) {
-            if (nameEl) nameEl.textContent = holidayName;
-            banner.style.display = 'flex';
-        } else {
-            banner.style.display = 'none';
-        }
-    }
-
     const { data: rows, error } = await sb
         .from('archived_deliveries')
         .select('*')
@@ -77,6 +95,24 @@ async function loadHistoryV2() {
     if (error) {
         if (body) body.innerHTML = `<tr><td colspan="6" class="empty-state"><div class="empty-text">Error: ${error.message}</div></td></tr>`;
         return;
+    }
+
+    // Update holiday banner visibility and subtext
+    const banner = document.getElementById('histHolidayBanner');
+    const nameEl = document.getElementById('histHolidayName');
+    const subtextEl = document.getElementById('histHolidaySubtext');
+    if (banner) {
+        if (holidayName) {
+            if (nameEl) nameEl.textContent = holidayName;
+            if (subtextEl) {
+                subtextEl.textContent = (rows && rows.length)
+                    ? '— Public Holiday (Deliveries Active / Archived)'
+                    : '— Public Holiday (No Deliveries Scheduled)';
+            }
+            banner.style.display = 'flex';
+        } else {
+            banner.style.display = 'none';
+        }
     }
 
     if (!rows || !rows.length) {

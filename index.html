@@ -760,9 +760,9 @@
                   <input type="month" class="date-inp" id="histExportMonth" style="display:inline-block">
                   <button class="topbar-btn secondary" onclick="exportHistoryToExcel()">⬇ Export Excel</button>
                 </div>
-                <!-- Holiday indicator: shown when selected date is a marked holiday -->
+                <!-- Holiday indicator: shown when selected date is a holiday -->
                 <div id="histHolidayBanner" style="display:none;margin:0 18px 10px;padding:10px 14px;background:var(--amberbg);border:1px solid var(--amber);border-radius:8px;font-size:12px;font-weight:600;color:var(--amber);display:flex;align-items:center;gap:8px">
-                  🎉 <span id="histHolidayName">Holiday</span> — no deliveries on this date
+                  🎉 <span id="histHolidayName">Holiday</span> <span id="histHolidaySubtext" style="font-weight:400;color:var(--muted)">— Public Holiday</span>
                 </div>
               </div>
               <!-- Holiday Manager (collapsible) -->
