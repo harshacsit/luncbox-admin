@@ -832,12 +832,12 @@
                   <option value="range">Date Range</option>
                 </select>
                 <input type="month" class="date-inp" id="analyticsMonthPicker" style="display:none"
-                  onchange="loadAnalytics()">
+                  onchange="loadAnalyticsV2()">
                 <input type="date" class="date-inp" id="analyticsRangeStart" style="display:none"
-                  onchange="loadAnalytics()" title="Start date">
+                  onchange="loadAnalyticsV2()" title="Start date">
                 <input type="date" class="date-inp" id="analyticsRangeEnd" style="display:none"
-                  onchange="loadAnalytics()" title="End date">
-                <button class="topbar-btn secondary" onclick="loadAnalytics(true)">↻ Refresh</button>
+                  onchange="loadAnalyticsV2()" title="End date">
+                <button class="topbar-btn secondary" onclick="loadAnalyticsV2(true)">↻ Refresh</button>
                 <button class="topbar-btn secondary" onclick="exportAnalyticsToExcel()">⬇ Export Excel</button>
               </div>
             </div>

@@ -44,40 +44,44 @@ async function exportHistoryToExcel() {
 
   let rows;
   try {
+    let s = '2020-01-01', e = today;
     if (scope === 'month') {
-      const s = month + '-01';
+      s = month + '-01';
       const d = new Date(month + '-01T00:00:00'); d.setMonth(d.getMonth() + 1); d.setDate(0);
-      const e = d.toISOString().split('T')[0];
-      toast('Reading ' + month + '…', 'info');
-      rows = await loadHistoryForScope('month', s, e);
+      e = d.toISOString().split('T')[0];
+      toast('Reading ' + month + ' from Supabase…', 'info');
     } else if (scope === 'range') {
-      toast(`Reading ${start} to ${end}…`, 'info');
-      rows = await loadHistoryForScope('range', start, end);
+      s = start; e = end;
+      toast(`Reading ${start} to ${end} from Supabase…`, 'info');
     } else {
-      const ok = await askConfirm('This reads your ENTIRE delivery history in one query and can be a large number of Firestore reads.\n\nContinue? (Tip: "Date Range" or "Month" are much cheaper.)', {title:'Confirm Large Query', confirmLabel:'Continue Export', danger:false});
-      if (!ok) return;
-      toast('Reading full history…', 'info');
-      rows = await loadHistoryForScope('all');
+      toast('Reading full history from Supabase…', 'info');
+    }
+    if (typeof fetchArchivedDeliveriesFromSupabase === 'function') {
+      rows = await fetchArchivedDeliveriesFromSupabase(s, e, scope);
+    } else {
+      const { data, error } = await sb.from('archived_deliveries').select('*').gte('archive_date', s).lte('archive_date', e);
+      if (error) throw new Error(error.message);
+      rows = data || [];
     }
   } catch (e) {
     toast('Export failed: ' + e.message, 'err');
     return;
   }
 
-  if (!rows.length) { toast('No history found for that period', 'err'); return; }
+  if (!rows || !rows.length) { toast('No history found for that period', 'err'); return; }
 
   const sheetRows = rows.map(d => ({
-    'Date': d.archiveDate || '',
-    'Box ID': d.boxId || '',
-    'Customer': d.customerName || '',
-    'Phone': d.customerPhone || '',
-    'Agent': agents[d.assignedTo]?.name || d.assignedName || '',
+    'Date': d.archive_date || d.delivery_date || '',
+    'Box ID': d.box_id || '',
+    'Customer': d.customer_name || '',
+    'Phone': d.customer_phone || '',
+    'Agent': agents[d.assigned_to]?.name || d.assigned_name || '',
     'Status': d.status || '',
-    'Was Delayed (flag)': d.wasDelayed ? 'Yes' : 'No',
-    'Pickup Location': d.pickupLocation || '',
-    'Delivery Address': d.deliveryAddress || '',
-    'Item Count': d.itemCount || 1,
-    'Picked/Delivered Time': (d.pickedAt || d.deliveredAt || d.timestamp) ? new Date(d.pickedAt || d.deliveredAt || d.timestamp).toLocaleString('en-IN') : ''
+    'Was Delayed (flag)': d.was_delayed ? 'Yes' : 'No',
+    'Pickup Location': d.pickup_location || '',
+    'Delivery Address': d.delivery_address || '',
+    'Item Count': d.item_count || 1,
+    'Picked/Delivered Time': (d.picked_at || d.timestamp) ? new Date(Number(d.picked_at || d.timestamp)).toLocaleString('en-IN') : ''
   }));
   const ws = XLSX.utils.json_to_sheet(sheetRows);
   const wb = XLSX.utils.book_new();

@@ -1,6 +1,37 @@
 // ══ ANALYTICS (SUPABASE-BACKED) ══
 // Uses the same `sb` client already created in history_v2.js
 
+async function fetchArchivedDeliveriesFromSupabase(startDate, endDate, scope) {
+  let allRows = [];
+  let from = 0;
+  const pageSize = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = sb.from('archived_deliveries').select('*');
+    if (scope !== 'all') {
+      query = query.gte('archive_date', startDate).lte('archive_date', endDate);
+    }
+    const { data, error } = await query
+      .order('archive_date', { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (error) throw new Error(error.message);
+
+    if (data && data.length > 0) {
+      allRows.push(...data);
+      if (data.length < pageSize) {
+        hasMore = false;
+      } else {
+        from += pageSize;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+  return allRows;
+}
+
 async function loadAnalyticsV2(forceRefresh) {
   const loadingEl = document.getElementById('analyticsLoading');
   if (loadingEl) loadingEl.style.display = 'block';
@@ -13,7 +44,7 @@ async function loadAnalyticsV2(forceRefresh) {
   const isRange = scope === 'range';
 
   // Build date range for the query
-  let startDate = '2026-07-01'; // set to July 1 to include our test database records
+  let startDate = '2020-01-01'; // Default for All-time
   let endDate = today;
   if (isMonth) {
     startDate = monthVal + '-01';
@@ -30,7 +61,7 @@ async function loadAnalyticsV2(forceRefresh) {
     ? new Date(monthVal + '-02').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
     : isRange
       ? `${startDate} → ${endDate}`
-      : 'All-time (from Jul 1, 2026)';
+      : 'All-time performance';
   if (scopeLabelEl) scopeLabelEl.textContent = `${periodLabel} performance, from Supabase archive`;
 
   ['an_totalDelayedFlagLbl', 'an_totalEndedDelayedLbl', 'an_totalNoboxReqLbl'].forEach(id => {
@@ -42,18 +73,33 @@ async function loadAnalyticsV2(forceRefresh) {
   if (agTitleEl) agTitleEl.innerHTML = `Agent Performance (${(isMonth || isRange) ? periodLabel : 'All-Time'}) <span style="font-weight:400;color:var(--muted);font-size:11px">— click a row for full detail</span>`;
 
   try {
-    // Pull customers (still from Firestore — live master list) and history rows (from Supabase)
-    const [custSnap, noboxSnap, historyResult] = await Promise.all([
+    // Pull customers (from Firestore master list), nobox requests, archived deliveries (Supabase), and active live deliveries (Firestore)
+    const [custSnap, noboxSnap, archivedRows, liveSnap] = await Promise.all([
       db.collection('customers').get(),
       db.collection('nobox_requests').get(),
-      sb.from('archived_deliveries')
-        .select('*')
-        .gte('archive_date', startDate)
-        .lte('archive_date', endDate)
+      fetchArchivedDeliveriesFromSupabase(startDate, endDate, scope),
+      db.collection('deliveries').get().catch(() => ({ docs: [] }))
     ]);
 
-    if (historyResult.error) throw new Error(historyResult.error.message);
-    const histDocs = historyResult.data || [];
+    const histDocs = [...archivedRows];
+    if (liveSnap && liveSnap.docs) {
+      liveSnap.docs.forEach(doc => {
+        const d = doc.data();
+        const delDate = d.deliveryDate || today;
+        if (scope === 'all' || (delDate >= startDate && delDate <= endDate)) {
+          histDocs.push({
+            customer_id: d.customerId || doc.id,
+            customer_name: d.customerName || '',
+            customer_phone: d.customerPhone || '',
+            box_id: d.boxId || '',
+            assigned_to: d.assignedTo || '',
+            status: d.status || 'Pending',
+            was_delayed: !!d.wasDelayed,
+            archive_date: delDate
+          });
+        }
+      });
+    }
 
     const custMap = {};
     custSnap.forEach(doc => {
@@ -116,6 +162,7 @@ async function loadAnalyticsV2(forceRefresh) {
 
     analyticsLoaded = true;
   } catch (e) {
+    console.error("Analytics load failed:", e);
     toast('Analytics load failed: ' + e.message, 'err');
   }
   if (loadingEl) loadingEl.style.display = 'none';
@@ -127,7 +174,8 @@ async function loadWeeklyTrendV2() {
 
   const { data: rows, error } = await sb
     .from('archived_deliveries')
-    .select('archive_date, status');
+    .select('archive_date, status')
+    .limit(5000);
 
   if (error) {
     console.error("Weekly trend query failed:", error);
@@ -212,3 +260,6 @@ async function loadWeeklyTrendV2() {
     }
   });
 }
+
+// Global fallback alias
+window.loadAnalytics = loadAnalyticsV2;

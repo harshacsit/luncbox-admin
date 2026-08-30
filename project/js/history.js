@@ -214,13 +214,24 @@ async function triggerReset(auto) {
     const rm = document.getElementById('resetResultMsg');
     if (rm) {
       rm.style.display = 'block';
+      rm.style.background = 'var(--greenbg)';
+      rm.style.color = 'var(--green)';
+      rm.style.borderColor = 'var(--green)';
       rm.textContent = result.archivedCount
         ? `✅ Archived ${result.archivedCount} deliveries across ${result.archivedDates.length} date(s) (${result.archivedDates.join(', ')}) — ready for tomorrow!`
-        : 'No deliveries to archive.';
+        : 'ℹ️ No deliveries to archive.';
     }
     toast(auto ? 'Auto Reset complete!' : 'Reset complete!', 'ok');
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Archive & Reset for Tomorrow'; }
+    const rm = document.getElementById('resetResultMsg');
+    if (rm) {
+      rm.style.display = 'block';
+      rm.style.background = 'rgba(211,47,47,0.08)';
+      rm.style.color = 'var(--red)';
+      rm.style.borderColor = 'var(--red)';
+      rm.textContent = '❌ Reset failed: ' + e.message;
+    }
     toast('Reset failed: ' + e.message, 'err');
   }
 }
