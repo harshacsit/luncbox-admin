@@ -103,7 +103,7 @@ function _renderHistoryRows(rows, statusFilter) {
         return (a.pickup_order || 9999) - (b.pickup_order || 9999);
     });
 
-    const sc = { Delivered: 'badge-delivered', Picked: 'badge-picked', Delayed: 'badge-delayed', Pending: 'badge-pending', NoBox: 'badge-delayed' };
+    const sc = { Delivered: 'badge-delivered', Picked: 'badge-picked', Delayed: 'badge-delayed', Pending: 'badge-pending', NoBox: 'badge-nobox' };
     let rowIdx = 0, lastAgent = null;
     body.innerHTML = docs.map(d => {
         rowIdx++;
@@ -118,4 +118,80 @@ function _renderHistoryRows(rows, statusFilter) {
         }
         return groupRow + `<tr><td style="color:var(--muted)">${rowIdx}</td><td><strong>${d.customer_name || '—'}</strong></td><td style="font-family:var(--mono);font-size:12px;color:var(--blue)">${d.customer_phone || '—'}</td><td>${ag}</td><td><span class="badge ${sc[d.status] || 'badge-pending'}">${d.status}</span>${delayedTag}</td><td style="color:var(--muted);font-size:12px">${t}</td></tr>`;
     }).join('');
-}
+}
+
+// ══ HOLIDAY MANAGER ══
+// Holidays stored in localStorage so they persist across sessions without a backend.
+// Format: { "2026-08-15": "Independence Day", "2026-10-02": "Gandhi Jayanti" }
+
+function _getHolidays() {
+    try { return JSON.parse(localStorage.getItem('lb_holidays') || '{}'); }
+    catch { return {}; }
+}
+
+function _saveHolidays(h) {
+    localStorage.setItem('lb_holidays', JSON.stringify(h));
+}
+
+function addHoliday() {
+    const dt   = document.getElementById('holidayDateInp')?.value;
+    const name = (document.getElementById('holidayNameInp')?.value || '').trim();
+    if (!dt)   { toast('Select a date for the holiday', 'err'); return; }
+    if (!name) { toast('Enter a holiday name', 'err'); return; }
+    const h = _getHolidays();
+    h[dt] = name;
+    _saveHolidays(h);
+    renderHolidayList();
+    document.getElementById('holidayDateInp').value  = '';
+    document.getElementById('holidayNameInp').value  = '';
+    toast('Holiday added: ' + name, 'ok');
+    // If the current histDate matches, show the banner immediately
+    _checkHolidayBanner();
+}
+
+function removeHoliday(dt) {
+    const h = _getHolidays();
+    delete h[dt];
+    _saveHolidays(h);
+    renderHolidayList();
+    _checkHolidayBanner();
+    toast('Holiday removed', 'ok');
+}
+
+function renderHolidayList() {
+    const el = document.getElementById('holidayList');
+    if (!el) return;
+    const h = _getHolidays();
+    const entries = Object.entries(h).sort(([a], [b]) => a.localeCompare(b));
+    if (!entries.length) {
+        el.innerHTML = '<span style="font-size:11px;color:var(--muted)">No holidays added yet</span>';
+        return;
+    }
+    el.innerHTML = entries.map(([dt, name]) =>
+        `<span style="display:inline-flex;align-items:center;gap:5px;background:var(--amberbg);border:1px solid var(--amber);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--amber)">
+            🎉 ${name} <span style="font-weight:400;color:var(--muted)">${dt}</span>
+            <span onclick="removeHoliday('${dt}')" style="cursor:pointer;color:var(--red);font-weight:700;margin-left:2px" title="Remove">✕</span>
+         </span>`
+    ).join('');
+}
+
+function _checkHolidayBanner() {
+    const dt      = document.getElementById('histDate')?.value;
+    const banner  = document.getElementById('histHolidayBanner');
+    const nameEl  = document.getElementById('histHolidayName');
+    if (!banner) return;
+    const h = _getHolidays();
+    if (dt && h[dt]) {
+        if (nameEl) nameEl.textContent = h[dt];
+        banner.style.display = 'flex';
+    } else {
+        banner.style.display = 'none';
+    }
+}
+
+// Wire up: check holiday banner whenever the date changes
+document.addEventListener('DOMContentLoaded', () => {
+    const inp = document.getElementById('histDate');
+    if (inp) inp.addEventListener('change', _checkHolidayBanner);
+    renderHolidayList();
+});
