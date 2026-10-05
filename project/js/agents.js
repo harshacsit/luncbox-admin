@@ -14,7 +14,8 @@ function loadAgents() {
         onDuty: d.onDuty === true, lastOnlineAt: d.lastOnlineAt || null, lastOfflineAt: d.lastOfflineAt || null
       };
       const ini = (d.name || '?').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-      const tot = d.totalDeliveries || 0, dn = d.completedDeliveries || 0, pct = tot > 0 ? Math.round((dn * 100) / tot) : 0;
+      const agDels = (allDeliveries || []).filter(del => del.assignedTo === doc.id);
+      const tot = agDels.length || d.totalDeliveries || 0, dn = agDels.filter(del => del.status === 'Delivered' || del.status === 'Picked').length || d.completedDeliveries || 0, pct = tot > 0 ? Math.round((dn * 100) / tot) : 0;
       if (d.zone) zones.add(d.zone.toLowerCase());
 
       // ── On Duty / Off Duty pill — reflects the agent's last toggle in the app ──
@@ -44,15 +45,31 @@ function loadAgents() {
     const zSel = document.getElementById('broadcastZone');
     if (zSel) { zSel.innerHTML = '<option value="">Select Zone...</option>'; zones.forEach(z => zSel.innerHTML += `<option value="${z}">${z}</option>`); }
     renderAgentLoad();
-    // NOTE: no longer auto-fetching full delivery history here. This used to call
-    // loadHistoryCache() -> collectionGroup('deliveries').get() on EVERY dashboard
-    // load (every login/refresh), unfiltered across your entire archive — the
-    // actual cause of the 300K-read spike. The "Total/Done/Rate" numbers on each
-    // agent card now only refresh with real all-time data after you visit the
-    // Analytics tab once per session (Analytics already calls applyAgentPerfToCards
-    // itself). Until then they show the raw totalDeliveries/completedDeliveries
-    // fields on the user doc, which is what the very first version of this app did.
+    updateAgentTodayStats();
   }).catch(e => toast('Could not load agents: ' + e.message, 'err'));
+}
+
+function updateAgentTodayStats() {
+  if (!agents || Object.keys(agents).length === 0) return;
+  const perf = {};
+  (allDeliveries || []).forEach(d => {
+    const uid = d.assignedTo; if (!uid) return;
+    if (!perf[uid]) perf[uid] = { total: 0, done: 0 };
+    perf[uid].total++;
+    if (d.status === 'Delivered' || d.status === 'Picked') perf[uid].done++;
+  });
+  Object.keys(agents).forEach(uid => {
+    const p = perf[uid] || { total: 0, done: 0 };
+    const pct = p.total > 0 ? Math.round((p.done * 100) / p.total) : 0;
+    const tEl = document.getElementById('agTot_' + uid), dEl = document.getElementById('agDone_' + uid),
+      rEl = document.getElementById('agRate_' + uid), bEl = document.getElementById('agBar_' + uid),
+      lEl = document.getElementById('agPerfLbl_' + uid);
+    if (tEl) tEl.textContent = p.total;
+    if (dEl) dEl.textContent = p.done;
+    if (rEl) rEl.textContent = pct + '%';
+    if (bEl) bEl.style.width = pct + '%';
+    if (lEl) lEl.textContent = 'Performance: ' + pct + '%';
+  });
 }
 
 function applyAgentPerfToCards(historyDocs) {

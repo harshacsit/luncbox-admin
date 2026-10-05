@@ -5,7 +5,7 @@ function listenDeliveries() {
     allDeliveries = [];
     snap.forEach(doc => { const d = doc.data(); d.id = doc.id; allDeliveries.push(d); });
     allDeliveries.sort((a, b) => (a.pickupOrder || 999) - (b.pickupOrder || 999));
-    updateStats(); renderDeliveries(); renderDelayed(); renderAgentLoad(); renderRecentActivity();
+    updateStats(); renderDeliveries(); renderDelayed(); renderAgentLoad(); renderSchoolLoad(); renderRecentActivity(); updateAgentTodayStats();
   }, e => toast('Listener error: ' + e.message, 'err'));
 }
 
@@ -102,6 +102,44 @@ function renderAgentLoad() {
     return `<div class="agent-mini-card" onclick="openAgentDeliveries('${uid}')" title="View ${escQ(nm)}'s deliveries">
       <div class="agent-mini-av">${ini}</div>
       <div class="agent-mini-name">${nm}</div>
+      <div class="agent-mini-stats">
+        <span class="p">${c.p}P</span><span class="k">${c.k}D</span>${c.dl > 0 ? `<span class="dl">${c.dl}L</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSchoolLoad() {
+  // Normalize: lowercase, strip the word "school", trim → use as grouping key.
+  // "westberry school", "Westberry School", "westberry" all map to key "westberry".
+  function schoolKey(addr) {
+    return (addr || 'unknown').toLowerCase().replace(/\bschool\b/gi, '').trim();
+  }
+  // Build a nice display label: Title Case + " School" suffix
+  function schoolLabel(key) {
+    if (!key) return 'Unknown School';
+    const titled = key.replace(/\b\w/g, c => c.toUpperCase());
+    return titled + ' School';
+  }
+
+  const map = {}; // key → { label, p, k, dl }
+  allDeliveries.filter(d => d.deliveryDate === today).forEach(d => {
+    const raw = (d.deliveryAddress || '').trim();
+    const key = schoolKey(raw) || 'unknown';
+    if (!map[key]) map[key] = { label: schoolLabel(key), p: 0, k: 0, dl: 0 };
+    if (d.status === 'Pending') map[key].p++;
+    else if (d.status === 'Picked' || d.status === 'Delivered') map[key].k++;
+    else if (d.status === 'Delayed') map[key].dl++;
+  });
+  const grid = document.getElementById('schoolLoadGrid');
+  if (!grid) return;
+  const entries = Object.values(map);
+  if (!entries.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-text">No deliveries today yet</div></div>'; return; }
+  grid.innerHTML = entries.map(c => {
+    const ini = c.label.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    return `<div class="agent-mini-card" title="${escQ(c.label)}">
+      <div class="agent-mini-av">${ini}</div>
+      <div class="agent-mini-name">${c.label}</div>
       <div class="agent-mini-stats">
         <span class="p">${c.p}P</span><span class="k">${c.k}D</span>${c.dl > 0 ? `<span class="dl">${c.dl}L</span>` : ''}
       </div>
